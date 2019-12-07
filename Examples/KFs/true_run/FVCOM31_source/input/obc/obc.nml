@@ -1,0 +1,14 @@
+ &NML_OBC
+ INPUT_DIR       = '../../../Input/' ,
+ OUTPUT_DIR      = '../../../Input/',
+ GRID_FILE       = 'tst_grd.dat',
+ SIGMA_LEVELS_FILE       = 'sigma.dat',
+ DEPTH_FILE      = 'tst_dep.dat',
+ OBC_NODE_LIST_FILE      = 'tst_obc.dat',
+ ELEVATION_SOURCE_TYPE   = 'convert2new_spectral',
+ ELEVATION_SOURCE_FILE   = 'tst_el_obc_newformat.dat',
+ TIME_ORIGIN     = 'seconds=0.0',
+ TIMEZONE        = 'none',
+ TS_SOURCE_TYPE  = ,
+ TS_SOURCE_FILE  =
+ /

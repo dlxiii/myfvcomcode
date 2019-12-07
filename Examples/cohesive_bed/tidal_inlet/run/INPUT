@@ -1,0 +1,339 @@
+!======== Section 1. Start-up ==========================================
+!-------- PROJECT  reading of project title and description 
+PROJECT = defined      !defined, default
+!$$if PROJECT == defined
+NAME = simple
+NR = nr1
+!title1 =   
+!title2 =   
+!title3 =    
+!$$endif PROJECT   
+
+!------- SET  setting physical parameters and error counters
+SET = default        !defined, default
+!$$if SET == defined 
+LEVEL = 15.0
+NOR = 90.0 
+DEPMIN = 0.05
+MAXMES = 0
+MAXERR = 3
+GRAV = 9.81
+RHO = 1025.00
+INRHOG = 0
+HSRERR = 0.1
+NAUTICAL = F
+PWTAIL = 3.0
+FROUDMAX = 0.8
+PRINTF = 4
+PRTEST = 4
+!$$endif SET   
+
+!------- MODE  Set STATionary, DYNamic (NONSTAtionary) or 1D SWAN model    
+MODE = defined      !defined, default
+!$$if MODE == defined
+STATIONARY = F          !Keep this F now
+ONED = F                !Keep this F now
+ACUPDAT = T             !Keep this T now
+!$$endif MODE   
+
+!------- COORD  spherical or cartesian coordinates
+COORDINATES = defined       !defined, default
+!$$if COORDINATES == defined
+KSPHER = 0                !KSPHER = 0    for cartesian coordinates
+                          !         1    for spherical coordinates
+!REARTH = 6366198.        !radius of the earth
+!PROJ_METHOD = 1          !PROJ_METHOD = 0 for quasi-cartesian projection method (spherical option)
+                          !            = 1 for uniform Mercator projection (spherical option)
+                          !              default for spherical coordinates
+!KREPTX = 0               !The option only for academic cases 
+!$$endif COORDINATES
+
+!======== Section 2. Model Description =========================================================
+ALPC = 0.0
+FULCIR = T
+MDC = 72
+!$$if FULCIR == F
+DIR1 = 0.0    !30.0
+DIR2 = 360.0  !210.0
+!$$endif FULCIR
+MSC = 20
+FLOW = 0.04
+FHIGH = 1.0
+
+!======== Section 3. Input ============================================================ 
+INP_CUR = F 
+!$$if INP_CUR == T    
+INP_CUR_STAT = F
+INP_CUR_NAME =  curr.xy 
+!$$if INP_CUR_STAT == F
+CUR_TBEGINP = 0
+CUR_DELTINP = 1
+CUR_TENDINP = 100
+!$$endif INP_CUR_STAT   
+INP_CUR_SERI = F
+!$$endif INP_CUR   
+
+!INP_WI = T
+!$$if INP_WI == T
+!INP_WI_STAT = F
+!INP_WI_NAME =  wind.xy 
+!$$if INP_WI_STAT == F
+!WI_TBEGINP = 0.0          !unit = hour
+!WI_DELTINP = 1.0          !unit = hour
+!WI_TENDINP = 738.0          !unit = hour
+!$$endif INP_WI_STAT   
+INP_WI_SERI = T
+!$$endif INP_WI   
+
+INP_FR = F
+!$$if INP_FR == T     
+INP_FR_STAT = T
+INP_FR_NAME =  fr.xy 
+!$$if INP_FR_STAT == F
+FR_TBEGINP = 0
+FR_DELTINP = 1
+FR_TENDINP = 100
+!$$endif INP_FR_STAT   
+INP_FR_SERI = F
+!$$endif INP_FR   
+
+INP_WLEV = F 
+!$$if INP_WLEV == T  
+INP_WLEV_STAT = F
+INP_WLEV_NAME = wlev.xy 
+!$$if INP_WLEV_STAT == F
+WLEV_TBEGINP = 0
+WLEV_DELTINP = 1
+WLEV_TENDINP = 100
+!$$endif INP_WLEV_STAT   
+INP_WLEV_SERI = F
+!$$endif INP_WLEV   
+
+!-------- WIND  parameters uniform wind field -------------------------
+!WIND = F     !T
+!$$if WIND == T
+!U10 =  0.0
+!WDIP = 90.0 
+!$$endif WIND
+
+!======== Section 4. Boundary and initial conditions ================================== 
+BOUNDARY = defined     !default     !defined 
+!$$if BOUNDARY == defined
+BOUND_CHOICE = UNIFORM  !UNIFORM (or CONSTANT), NESTING
+NESTING_FILE = ./gom_nesting_0001.nc
+SHAPESPEC = JON       !JON, PM, GAUS, BIN
+!$$if SHAPESPEC == JON
+GAMMA = 3.3
+!$$else if SHAPESPEC = GAUS
+SIGFR = 0.01
+!$$end if SHAPESPEC
+CHAR_WAVE_PERIOD = PEAK      !PEAK, MEAN
+DSPR = POW                   !POW, DEGREES
+
+HSIG = 1.0
+PER = 10.0
+DIR = 270.0
+DD = 20.0
+!$$endif BOUNDARY
+
+INITIAL = default
+!INIT_COND = DEF           !DEF, ZERO, PAR, HOTS
+!HSIG = 1.0
+!PER = 1.0
+!DIR = 180.0
+!DD = 30.0
+!if INIT_COND == HOTS, use parameters below
+!HOTS_FNAME = hotstart
+
+!======== Section 5. Nesting Configuration and Output ==================================
+NESTING_OUT_ON = F
+INP_NEST_NAME = nesting_node.dat
+NEST_INT = 1
+
+
+
+!======== Section 6. Physics ========================================================== 
+GEN = 3                     !the mode generation
+QUAD = F                    !this option can be used to influence the computation of 
+                            !nonlinear quadruplet wave interations. Default: activated.
+!$$if QUAD == T
+IQUAD = 2
+!LIMITER = 0.1           
+!LAMBDA  = 0.25
+!CNL4    = 3.E7
+!CSH1    = 5.5
+!CSH2    = 0.833
+!CSH3    = -1.25
+!$$endif QUAD
+
+AGROW = F                   !if True, the wave growth term of Cavaleri and Malanotte (1981)
+                            !is activated.
+!$$if AGROW == T
+!A = 0.0015
+!$$endif AGROW
+
+!$$if GEN == 1
+GEN1_CF10   = 188.
+GEN1_CF20   = 0.59
+GEN1_CF30   = 0.12
+GEN1_CF40   = 250.
+GEN1_EDMLPM = 0.0036
+GEN1_CDRAG  = 0.0012
+GEN1_UMIN   = 1.
+GEN1_CFPM   = 0.13
+!$$endif GEN == 1
+
+!$$if GEN == 2
+GEN2_CF10   = 188.
+GEN2_CF20   = 0.59
+GEN2_CF30   = 0.12
+GEN2_CF40   = 250.
+GEN2_CF50   = 0.0023
+GEN2_CF60   = -0.223
+GEN2_EDMLPM = 0.0036
+GEN2_CDRAG  = 0.0012
+GEN2_UMIN   = 1.
+GEN2_CFPM   = 0.13
+!$$endif GEN == 2
+
+!$$if GEN == 3
+GROWTH = KOM     !JANS, KOM, WESTH 
+!$$if GROWTH == JANS
+GEN3_JANS_CDS1 = 4.5
+GEN3_JANS_DELTA = 0.5
+!$$else if GROWTH == KOM
+GEN3_KOM_CDS2 = 2.36E-5
+GEN3_KOM_STPM = 3.02E-3
+!$$else if GROWTH == WESTH
+GEN_WESTH_CDS2 = 5.0E-5
+GEN_WESTH_BR = 1.75e-3
+GEN_WESTH_P0 = 4.
+GEN_WESTH_POWST = 0.
+GEN_WESTH_POWK = 0.
+
+!-------- WCAP  parameters whitecapping ------------------------------
+WCAP = KOM      !KOM, JANS, LHIG, BJ, KBJ, CSM, AB, OFF
+!$$if WCAP == KOM
+WCAP_KOM_CDS2 = 0.0000236
+WCAP_KOM_STPM = 0.00302
+WCAP_KOM_POWST = 2.
+WCAP_KOM_DELTA = 0.5
+WCAP_KOM_POWK = 1.0
+!$$else if WCAP == JANS
+WCAP_JANS_CDS1 = 4.5
+WCAP_JANS_DELTA = 0.5
+WCAP_JANS_PWTAIL = 5.0
+!$$else if WCAP == LHIG
+WCAP_LHIG_CFLHIG = 1.0
+!$$else if WCAP == BJ
+WCAP_BJ_BJSTP = 0.88
+WCAP_BJ_BJALF = 1.0
+!$$else if WCAP == KBJ
+WCAP_KBJ_BJSTP = 0.88
+WCAP_KBJ_BJALF = 1.0
+WCAP_KBJ_KCONV = 0.75
+!$$else if WCAP == CSM
+WCAP_CSM_CST = 4.0
+WCAP_CSM_POW = 2.0
+!$$else if WCAP == AB
+WCAP_AB_CDS2 = 0.00005
+WCAP_AB_BR = 0.00175
+WCAP_AB_P0 = 4.0
+WCAP_AB_POWST = 0.0
+WCAP_AB_POWK = 0.0
+!$$endif WCAP
+
+!-------- MDIA  this part is not tested ------------------------------
+MDIA = F
+!$$if MDIA == T
+!MDIA_LAM = F
+!$$if MDIA_LAM == T
+MDIA_LAMBDA = -1
+!$$enfif MDIA_LAM
+MDIA_CNL4C = CNL4_12
+!$$if MDIA_CNL4C == CNL4_12
+MDIA_CNL4_1 = 0.0
+MDIA_CNL4_2 = 0.0
+!$$elseif MDIA_CNL4C == CNL4
+MDIA_CNL4 = 0.0
+!$$endif MDIA_CNL4C
+!$$endif MDIA
+
+!-------- BREAK  parameters surf breaking ----------------------------
+BRE = T
+!$$if BRE == T
+CONSTANT = CON           !CON, VAR
+!$$if CONSTANT == CON
+BRE_CON_ALPHA = 1.0
+BRE_CON_GAMMA = 0.73
+!$$else if CONSTANT == VAR
+BRE_VAR_ALPHA = 1.5
+BRE_VAR_GAMMIN = 0.55
+BRE_VAR_GAMMAX = 0.81
+BRE_VAR_GAMNEG = 0.73
+BRE_VAR_COEFF1 = 0.88
+BRE_VAR_COEFF2 = 0.012
+!$$endif CONSTANT
+!$$endif BRE
+
+!-------- bottom friction parameters ---------------------------------
+FRICTION = T
+!$$if FRICTION == T
+FRIC_FORM = MAD     !JON, COLL, MAD
+!$$if FRIC_FORM == JON
+CFJON = 0.067
+!$$else if FRIC_FORM == COLL
+CFW = 0.0
+CFC = 0.0
+!$$else if FRIC_FORM == MAD
+KN = 0.05
+!$$endif FRIC_FORM
+!$$endif FRICTION
+
+!-------- nonlinear 3 wave interaction parameters --------------------
+TRIAD = F
+!$$if TRIAD == T
+TRFAC = 0.05
+CUTFR = 2.5
+URCRIT = 0.2
+URSLIM = 0.01
+!$$endif TRIAD
+
+!-------- LIM setting parameters in conjunction with action limiter --
+LIM = F
+!$$if LIM == T
+URSELL = 0.0
+QB     = 0.0
+!$$endif LIM
+
+!-------- OBSTACLE   Definition of obstacles in comp grid. -----------
+OBSTACLE = F            
+
+!  SETUP     include wave-induced set-up in SWAN calculation
+SETUP = F       !T
+!$$if SETUP == T
+SUPCOR = 0.0     !2.0
+!$$endif SETUP
+
+!-------- DIFFRac   include diffraction approximation ----------------                        
+DIFFRAC = F
+
+!-------- OFF      switching standard options off --------------------
+OFF = F
+!$$if OFF == T
+OFF_REF     = YES
+OFF_FSH     = YES
+OFF_BRE     = YES
+OFF_WCAP    = YES
+OFF_QUAD    = YES
+OFF_WINDG   = YES
+OFF_BNDCHK  = YES
+OFF_RESCALE = YES
+!$$endif OFF
+
+!======== Section 7. Command COMPUTE ==============================================
+COMPUT = COMP
+NS_DELTC = 5.0
+TIME_UNIT = SECOND   ! DAY, HOUR, MINUTE, SECOND
+SOURCE_TERM_DTMAX = 300.0
+SOURCE_TERM_DTMIN = 10.0

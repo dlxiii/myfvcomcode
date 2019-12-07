@@ -1,0 +1,114 @@
+#
+# Configuration file for fvcom2ncpar Code
+#
+            SHELL = /bin/sh
+
+####################### MEDM ENVIRONMENT #####################################
+# Use the environmental variables, LIBPATH and INCLUDEPATH, set by MODULE 
+# to find the packages used by this build.
+colon=:
+empty=
+dashI= $(empty) -I
+dashL= $(empty) -L
+# ### UNCOMMENT HERE!
+#             LIBDIR       =  -L$(subst $(colon),$(dashL),$(LIBPATH))
+#             INCDIR       =  -I$(subst $(colon),$(dashI),$(INCLUDEPATH))
+
+#--------------------------------------------------------------------------
+#  NETCDF STUFF
+#--------------------------------------------------------------------------
+
+         EXEC     = xgenerate
+
+# PATH TO YOUR NETCDF LIBRARIES HERE
+
+# i386 libraries and build for salmon and minke machines
+#         NCLIBS   = -L/hosts/salmon01/data00/medm/lib -lnetcdf 
+#         NCINCS   = -I/hosts/salmon01/data00/medm/include
+#         FC       = ifort -axN -xN 
+
+# em64t libraries and build for guppy and cluster machines
+#         NCLIBS   = -L/hosts/salmon01/data00/medm/em64t/lib64 -lnetcdf 
+#         NCINCS   = -I/hosts/salmon01/data00/medm/em64t/include64
+#         FC       = ifort -axP 
+
+# em64t libraries and build for typhoeus and hydra clusters
+         NCLIBS   = -L/hosts/mao.smast.umassd.edu/usr/medm/opt/netcdf/4.3.1.1/lib -lnetcdff -lnetcdf 
+         NCINCS   = -I/hosts/mao.smast.umassd.edu/usr/medm/opt/netcdf/4.3.1.1/include
+         FC       = ifort -check all #-axN -xN  #-check all
+
+#--------------------------------------------------------------------------
+#  Preprocessing and Compilation Directives
+#--------------------------------------------------------------------------
+.SUFFIXES: .o .f90
+
+.f90.o:
+	$(FC) $(INCDIR)  $(NCINCS) $(INCS) -c $(FFLAGS) $*.f90
+
+#--------------------------------------------------------------------------
+#  Filter Source Code.
+#-------------------------------------------------------------------------
+
+
+ MAIN  = generate_thin_dam_inputs.f90
+ MOD   = 
+
+ SRCS = $(MOD) $(MAIN) 
+
+ OBJS = $(SRCS:.f90=.o)
+
+#--------------------------------------------------------------------------
+#  Linking Directives               
+#--------------------------------------------------------------------------
+
+$(EXEC):	$(OBJS)
+		$(FC) $(INCDIR) $(NCINCS) $(FFLAGS) $(LDFLAGS) -o $(EXEC) $(OBJS) $(NCLIBS) $(LIBDIR)
+
+#--------------------------------------------------------------------------
+#  Target to create dependecies.
+#--------------------------------------------------------------------------
+
+depend:
+		mv makedepends makedepends.orig
+		makedepf90  $(SRCS) > makedepends
+
+
+#--------------------------------------------------------------------------
+#  Tar Up Code                           
+#--------------------------------------------------------------------------
+
+tarfile:
+		tar cvf asciiout.tar *.f90 makefile 
+
+#--------------------------------------------------------------------------
+#  Cleaning targets.
+#--------------------------------------------------------------------------
+
+clean:
+		/bin/rm -f *.o *.mod asciiout
+
+clobber:	clean
+		/bin/rm -f *.f90
+
+#--------------------------------------------------------------------------
+#  Common rules for all Makefiles - do not edit.
+#--------------------------------------------------------------------------
+
+emptyrule::
+
+#--------------------------------------------------------------------------
+#  Empty rules for directories that do not have SUBDIRS - do not edit.
+#--------------------------------------------------------------------------
+
+install::
+	@echo "install in $(CURRENT_DIR) done"
+
+install.man::
+	@echo "install.man in $(CURRENT_DIR) done"
+
+Makefiles::
+
+includes::
+
+#include ./makedepends
+# DO NOT DELETE

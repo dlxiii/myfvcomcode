@@ -1,0 +1,64 @@
+set page size letter
+set page portrait
+set font to TimesRoman
+set line  width 0.6
+set font size 12
+set symbol size 0.15
+  .XLL. = 0  
+  .XUR. = 24
+  .YLL. = 0
+  .YUR. = 1
+set x format off
+set x margin 6
+set y margin 20.
+set x size 8.
+set y size 4
+set x axis .XLL. .XUR. 12  6
+set y axis .YLL. .YUR. 0.5
+set x name ""
+set y name ""
+draw label "Forecast RMS error" at -4 0.1 rotated 90
+draw label "at observed site" at -3 0.1 rotated 90
+draw axes
+set clip postscript on
+open ../Run/err.dat
+read columns y=1
+draw curve
+close
+set clip postscript off 
+
+set y margin 15.5
+draw label "Forecast RMS error" at -4 0.1 rotated 90
+draw label "of entire domain" at -3 0.1 rotated 90
+draw axes
+set clip postscript on
+open ../Run/err.dat
+read columns y=2
+draw curve
+close
+set clip postscript off 
+
+set y margin 11
+draw label "Analysis RMS error" at -4 0.1 rotated 90
+draw label "at observed site" at -3 0.1 rotated 90
+draw axes
+set clip postscript on
+open ../Run/err.dat
+read columns y=3
+draw curve
+close
+set clip postscript off 
+
+set y margin 6.5
+draw label "Analysis RMS error" at -4 0.1 rotated 90
+draw label "of entire domain" at -3 0.1 rotated 90
+set x name "Tidal Cycles"
+set x format default
+set x axis labels 12 "1" 24 "2" 
+draw axes
+set clip postscript on
+open ../Run/err.dat
+read columns y=4
+draw curve
+close
+set clip postscript off 

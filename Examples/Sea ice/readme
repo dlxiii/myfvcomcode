@@ -1,0 +1,8 @@
+How to run case 1D Sea Ice:
+
+1. Modifying file make.inc in folder FVCOM31_source here and run make
+2. Create link file: ln -s ./FVCOM31_source/fvcom .
+3. Create folder Output_1D
+4. run ./fvcom --casename=N1D
+5. run matlab file result.m (may take long time) to plot the results
+

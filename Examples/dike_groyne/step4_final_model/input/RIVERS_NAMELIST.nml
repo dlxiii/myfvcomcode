@@ -1,0 +1,36 @@
+ &NML_RIVER
+ RIVER_NAME      = 'tst_1'                                                                         ,
+ RIVER_FILE      = 'River_data.nc'                                                                 ,
+ RIVER_GRID_LOCATION     =        9250,
+ RIVER_VERTICAL_DISTRIBUTION     = 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1
+ /
+ &NML_RIVER
+ RIVER_NAME      = 'tst_2'                                                                         ,
+ RIVER_FILE      = 'River_data.nc'                                                                 ,
+ RIVER_GRID_LOCATION     =        9248,
+ RIVER_VERTICAL_DISTRIBUTION     =  0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 
+ /
+ &NML_RIVER
+ RIVER_NAME      = 'tst_3'                                                                         ,
+ RIVER_FILE      = 'River_data.nc'                                                                 ,
+ RIVER_GRID_LOCATION     =        9246,
+ RIVER_VERTICAL_DISTRIBUTION     = 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 
+ /
+ &NML_RIVER
+ RIVER_NAME      = 'tst_4'                                                                         ,
+ RIVER_FILE      = 'River_data.nc'                                                                 ,
+ RIVER_GRID_LOCATION     =        9244,
+ RIVER_VERTICAL_DISTRIBUTION     = 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1
+ /
+ &NML_RIVER
+ RIVER_NAME      = 'tst_5'                                                                         ,
+ RIVER_FILE      = 'River_data.nc'                                                                 ,
+ RIVER_GRID_LOCATION     =        9242,
+ RIVER_VERTICAL_DISTRIBUTION     = 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 
+ /
+ &NML_RIVER
+ RIVER_NAME      = 'tst_6'                                                                         ,
+ RIVER_FILE      = 'River_data.nc'                                                                 ,
+ RIVER_GRID_LOCATION     =        9240,
+ RIVER_VERTICAL_DISTRIBUTION     = 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 
+ /

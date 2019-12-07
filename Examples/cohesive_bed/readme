@@ -1,0 +1,40 @@
+1. This cohesive bed case is consisted of four classes of cohesive suspended sediment (mud_1, mud_2, mud_3 and mud_4), and cohesive bed process.
+
+2. The CSTMS_SED  and OFFLINE_SEDIMENT flags should be activated when compiling the FVCOM source code.
+
+3. All sediment parameters are included in the fvcom_sediment_inlet_test.inp.
+
+4. The descriptions for the sediment parameters could be found at the end of input file.
+
+5. The model details could be refered to:
+
+
+!=======================================================================
+! Harris and Wiberg (1997):                                            !
+!   -Approaches to quantifying long-term continental shelf sediment transport
+!   -with an example from the northern California STRESS mid-shelf site!
+!   [Continental Shelf REsearch, 17, 1389-1418]                        !
+!                                                                      !
+!  Meyer-Peter, E. and R. Muller, 1948: Formulas for bedload transport !
+!    In: Report on the 2nd Meeting International Association Hydraulic !
+!    Research, Stockholm, Sweden, pp 39-64.                            !
+!                                                                      !
+!  Soulsby, R.L. and J.S. Damgaard, 2005: Bedload sediment transport   !
+!    in coastal waters, Coastal Engineering, 52 (8), 673-689.          !
+!                                                                      !
+!  Warner, J.C., C.R. Sherwood, R.P. Signell, C.K. Harris, and H.G.    !
+!    Arango, 2008:  Development of a three-dimensional,  regional,     !
+!    coupled wave, current, and sediment-transport model, Computers    !
+!    & Geosciences, 34, 1284-1306.                                     !
+!                                                                      !
+!  Colella, P. and P. Woodward, 1984: The piecewise parabolic method   !
+!    (PPM) for gas-dynamical simulations, J. Comp. Phys., 54, 174-201. !
+!                                                                      !
+!  Liu, X.D., S. Osher, and T. Chan, 1994: Weighted essentially        !
+!    nonoscillatory shemes, J. Comp. Phys., 115, 200-212.              !
+!                                                                      !
+!  Verney, R., Lafite, R., Claude Brun-Cottan, J., & Le Hir, P. (2011).!
+!    Behaviour of a floc population during a tidal cycle: laboratory   !
+!    experiments and numerical modelling. Continental Shelf Research,  !
+!    31(10), S64-S83.                                                  !
+!=======================================================================

@@ -1,0 +1,16 @@
+set font size 8
+set x margin 4
+set y margin 10
+set x size 12
+set y size 12
+set x name "x(km)"
+set y name "y(km)"
+set x axis -60 60 30 10
+set y axis -60 60 30 10
+open tst_meshdraw.dat
+read columns x y
+draw axes
+set color red
+draw curve
+set color black
+close

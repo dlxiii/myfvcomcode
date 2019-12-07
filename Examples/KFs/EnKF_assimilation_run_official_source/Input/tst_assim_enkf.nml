@@ -1,0 +1,64 @@
+!==============================================================================!
+!   INPUT FILE FOR KALMAN FILTER PARAMETERS CONTROLLING                        !
+!   DESCRIPTION OF VARIABLES AND SUGGESTED PARAMETERS CAN BE FOUND AT BOTTOM   ! 
+!                                                                              !
+!        FORMAT:			                                       !
+!       1.) VARIABLE  = VALUE  (EQUAL SIGN MUST BE USED)                       !
+!       2.) FLOATING POINT VARIABLES MUST CONTAIN A PERIOD "." EX: 1.3, 2.,etc !
+!       3.) BLANK LINES ARE IGNORED AS ARE LINES BEGINNING WITH ! (F90 COMMENT)!
+!       4.) COMMENTS CAN FOLLOW VALUES IF MARKED BY !                          !
+!       5.) ORDER OF VARIABLES IS NOT IMPORTANT                                !
+!       6.) FOR MULTIPLE VALUE VARIABLES FIRST ENTRY IS NUMBER OF VARIABLES    !
+!           TO FOLLOW (OR 0 IF NONE)                                           !
+!       7.) DO NOT USE COMMAS TO SEPARATE VARIABLES                            !
+!       8.) DO NOT EXCEED EIGHTY CHARACTERS PER LINE                           !
+!       9.) FOR LINE CONTINUATION ADD \\ TO END OF LINE TO FORCE CONTINUE      !
+!           TO NEXT LINE.  MAXIMUM 4 CONTINUATIONS                             !
+!       10.) TRUE = T, FALSE = F                                               !
+!                                                                              ! 
+!==============================================================================!
+
+&NML_ENKF
+ENKF_ON = T
+ENKF_START_DATE  = 'cycle=24300'
+ENKF_END_DATE    = 'cycle=28800'
+ENKF_ASSIM_INTERVAL   = 'cycle=100'
+ENKF_NOBSMAX     =  50
+ENKF_NENS        =  20
+ENKF_CINF        = 1.0
+EKINT_START     = 24300 
+EL_ASSIM        =  T
+EL_OBS          =  T
+UV_ASSIM        =  F
+UV_OBS          =  F
+T_ASSIM         =  F
+T_OBS           =  F
+S_ASSIM         =  F
+S_OBS           =  F
+ENKF_LOCALIZED  =  F
+ENKF_METHOD     =  1
+MODE            =  11
+OBSERR_EL       = 0.01
+OBSERR_UV       = 0.01
+OBSERR_T       = 0.01
+OBSERR_S       = 0.01
+LOCAL_DISK      =  F
+/
+
+
+!===READ IN OBSERVATION INFORMATION ==========================================!
+!EL
+          1
+          11162     
+!UV
+          0
+          0 
+          0
+!T
+          0
+          0
+          0
+!S
+          3
+          15 62  34
+          1   1   1

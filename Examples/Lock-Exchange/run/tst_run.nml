@@ -1,0 +1,175 @@
+ !================================================================!
+   _______  _     _  _______  _______  _______    ______   _______ 
+  (_______)(_)   (_)(_______)(_______)(_______)  (_____ \ (_______)
+   _____    _     _  _        _     _  _  _  _     ____) )      _  
+  |  ___)  | |   | || |      | |   | || ||_|| |   / ____/      / ) 
+  | |       \ \ / / | |_____ | |___| || |   | |  | (_____  _  / /  
+  |_|        \___/   \______) \_____/ |_|   |_|  |_______)(_)(_/   
+                                                                   
+ !================================================================!
+ !                                                                !
+ !========DOMAIN DECOMPOSITION USING: METIS 4.0.1 ================!
+ !======Copyright 1998, Regents of University of Minnesota========!
+ !                                                                !
+ &NML_CASE
+ CASE_TITLE      = 'lock exchange'                                                                 ,
+ TIMEZONE        = 'none'                                                                          ,
+ DATE_FORMAT     = 'YMD'                                                                           ,
+ START_DATE      = 'cycle=0'                                                                       ,
+ END_DATE        = 'cycle=60000'  
+ /
+ &NML_STARTUP
+ STARTUP_TYPE    = 'coldstart'                                                                     ,
+ STARTUP_FILE    = 'tst_its.nc'                                                                          ,
+ STARTUP_UV_TYPE = 'default'                                                                       ,
+ STARTUP_TURB_TYPE       = 'default'                                                               ,
+ STARTUP_TS_TYPE = 'observed'                                                                      ,
+ STARTUP_T_VALS  =  18                                                                             ,
+ STARTUP_S_VALS  =  35.0                                                                           ,
+ STARTUP_DMAX    =  -0.1     
+ /
+ &NML_IO
+ INPUT_DIR       = './INPDIR'                                                                    ,
+ OUTPUT_DIR      = './OUTDIR'                                                                    ,
+ IREPORT =          1                                                                            ,
+ VISIT_ALL_VARS  =  F,
+ WAIT_FOR_VISIT  =  F,
+ USE_MPI_IO_MODE =  F
+ /
+
+ &NML_INTEGRATION
+ EXTSTEP_SECONDS =  0.0003 ,
+ ISPLIT  =          10     ,
+ IRAMP   =           0     ,
+ MIN_DEPTH       =  0.01   ,
+ STATIC_SSH_ADJ  =  0.0
+ /
+ &NML_RESTART
+ RST_ON  = F,
+ RST_FIRST_OUT   =  'cycle = 0'                                                                    ,
+ RST_OUT_INTERVAL    = 'cycle=60000'                                                               ,
+ RST_OUTPUT_STACK    =           0
+ /
+ &NML_NETCDF
+ NC_ON   = T,
+ NC_FIRST_OUT    = 'cycle=0'                                                                      ,
+ NC_OUT_INTERVAL = 'cycle=100'                                                                      ,
+ NC_OUTPUT_STACK =           0,
+ NC_GRID_METRICS = F,
+ NC_FILE_DATE    = F,
+ NC_VELOCITY     = T,
+ NC_SALT_TEMP    = T,
+ NC_TURBULENCE   = F,
+ NC_AVERAGE_VEL  = F,
+ NC_VERTICAL_VEL = T,
+ NC_NH_QP        = F,
+ NC_NH_RHS       = F,
+ NC_WIND_VEL     = F,
+ NC_WIND_STRESS  = F,
+ NC_EVAP_PRECIP  = F,
+ NC_SURFACE_HEAT = F,
+ NC_GROUNDWATER  = F,
+ NC_BIO  = F,
+ NC_WQM  = F,
+ NC_VORTICITY    = F
+ /
+ &NML_NETCDF_AV
+ NCAV_ON = F,
+ NCAV_FIRST_OUT  =  'none'    ,
+ NCAV_OUT_INTERVAL       = 'cycles=0 '                                               ,
+ NCAV_OUTPUT_STACK       =           0,
+ NCAV_EAST_VEL   = F,
+ NCAV_NORTH_VEL  = F,
+ NCAV_UPWARD_VEL = F,
+ NCAV_SALINITY   = F,
+ NCAV_TEMPERATURE        = F,
+ NCAV_OMEGA_VEL  = F
+ /
+ &NML_SURFACE_FORCING
+ WIND_ON = F,
+ HEATING_ON      = F,
+ PRECIPITATION_ON        = F,
+ AIRPRESSURE_ON  = F,
+ /
+ &NML_PHYSICS
+ HORIZONTAL_MIXING_TYPE  = 'constant'                                                                      ,
+ HORIZONTAL_MIXING_FILE  = 'none'                                                                          ,
+ HORIZONTAL_MIXING_KIND  = 'constant'                                                                      ,
+ HORIZONTAL_MIXING_COEFFICIENT   =  0.0                  ,
+ HORIZONTAL_PRANDTL_NUMBER       =  1.00000000000000     ,
+ VERTICAL_MIXING_TYPE    = 'constant'                                                                      ,
+ VERTICAL_MIXING_COEFFICIENT     =  0.0                  ,
+ VERTICAL_PRANDTL_NUMBER =  1.00000000000000             ,
+ BOTTOM_ROUGHNESS_TYPE   = 'orig'                        ,
+ BOTTOM_ROUGHNESS_KIND   = constant                                                                        ,
+ BOTTOM_ROUGHNESS_FILE   = 'none'                                                                          ,
+ BOTTOM_ROUGHNESS_LENGTHSCALE    =  0.001                ,
+ BOTTOM_ROUGHNESS_MINIMUM        =  0.0025               ,
+ CONVECTIVE_OVERTURNING  = F,
+ SCALAR_POSITIVITY_CONTROL       = T,
+ BAROTROPIC      =                 F,
+ BAROCLINIC_PRESSURE_GRADIENT    = 'sigma levels'                                                          ,
+ SEA_WATER_DENSITY_FUNCTION      = 'dens2'                                                                 ,
+ RECALCULATE_RHO_MEAN    = F,
+ INTERVAL_RHO_MEAN       = 'none'                                                                          ,
+ TEMPERATURE_ACTIVE      = T,
+ SALINITY_ACTIVE = T,
+ SURFACE_WAVE_MIXING     = F,
+ WETTING_DRYING_ON       = F,
+ ADCOR_ON        = F
+ /
+ &NML_RIVER_TYPE
+ RIVER_NUMBER    =          0,
+ RIVER_TS_SETTING        = 'calculated'                                                                 ,
+ RIVER_INFLOW_LOCATION   = 'node'                                                                
+ /
+ &NML_OPEN_BOUNDARY_CONTROL
+ OBC_ON  = F,
+ OBC_NODE_LIST_FILE      = tst_obc.dat                                                                     ,
+ OBC_ELEVATION_FORCING_ON        = F,
+ OBC_ELEVATION_FILE      = tst_obc.nc                                                                      ,
+ OBC_TS_TYPE     =          -1,
+ OBC_TEMP_NUDGING        = F,
+ OBC_TEMP_FILE   = tst_obc.nc                                                                      ,
+ OBC_TEMP_NUDGING_TIMESCALE      =  0.000000000000000E+000,
+ OBC_SALT_NUDGING        = F,
+ OBC_SALT_FILE   = tst_obc.nc                                                                      ,
+ OBC_SALT_NUDGING_TIMESCALE      =  0.000000000000000E+000,
+ OBC_MEANFLOW    = F,
+ OBC_MEANFLOW_FILE       = tst_obc.nc                                                              ,
+ OBC_LONGSHORE_FLOW_ON   = F,
+ OBC_LONGSHORE_FLOW_FILE = tst_lsf.dat                                                                     
+ /
+ &NML_GRID_COORDINATES
+ GRID_FILE       = tst_grd.dat                                                                     ,
+ GRID_FILE_UNITS = 'meters'                                                                        ,
+ PROJECTION_REFERENCE    = 'none'                                                                  ,
+ SIGMA_LEVELS_FILE       = tst_sigma.dat                                                           ,
+ DEPTH_FILE      = tst_dep.dat                                                                     ,
+ CORIOLIS_FILE   = tst_cor.dat                                                                     ,
+ SPONGE_FILE     = tst_spg.dat                                                                     
+ /
+ &NML_GROUNDWATER
+ GROUNDWATER_ON  = F,
+ GROUNDWATER_TEMP_ON     = F,
+ GROUNDWATER_SALT_ON     = F,
+ /
+ &NML_LAG
+ LAG_PARTICLES_ON        = F,
+ /
+ &NML_ADDITIONAL_MODELS
+ DATA_ASSIMILATION       = F,
+ BIOLOGICAL_MODEL        = F,
+ SEDIMENT_MODEL  = F,
+ ICING_MODEL     = F,
+ ICE_MODEL       = F,
+ /
+ &NML_PROBES
+ PROBES_ON       = F,
+ /
+ &NML_NESTING
+ NESTING_ON      = F,
+ /
+ &NML_NH
+ PROJ_SWITCH     =   -1
+ /

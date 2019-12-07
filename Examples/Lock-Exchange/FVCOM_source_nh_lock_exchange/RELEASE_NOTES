@@ -1,0 +1,9 @@
+FVCOM release 2.7beta
+
+THIS IS A BETA VERSION OF THE NEW FVCOM CODING
+
+CURRENT STATUS:
+results are tested for ideal channel and ideal estuary models
+
+only simple kinds of forceing are tested, do not use this coding for running a working model without first consulting David
+

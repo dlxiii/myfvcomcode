@@ -1,0 +1,70 @@
+! $Id: allocate_all.F,v 1.1.2.6 2008/06/05 14:50:24 jqi Exp $
+! $Name: New_Input $
+! $Revision: 1.1.2.6 $
+SUBROUTINE ALLOCATE_ALL
+  USE ALL_VARS
+  USE MOD_UTILS
+  USE MOD_OBCS
+  USE MOD_WD
+  USE MOD_SPHERICAL
+  USE MOD_NESTING
+# if defined (WATER_QUALITY)
+  USE MOD_WQM
+# endif    
+# if defined (SEMI_IMPLICIT)
+  USE MOD_SEMI_IMPLICIT
+# endif  
+# if defined (NH)
+  USE NON_HYDRO
+# endif
+  IMPLICIT NONE
+  INTEGER IERR
+  
+  IF(DBG_SET(DBG_LOG)) THEN
+     WRITE(IPT,*  )'!'
+     WRITE(IPT,*)'!                ALLOCATING MEMORY    '
+     WRITE(IPT,*  )'!'
+  END IF
+  
+  memcnt=0.0_SP
+
+  CALL ALLOC_VARS(DBG_SET(DBG_LOG))
+  
+  CALL ALLOC_OBC_DATA
+
+  IF(NESTING_ON) CALL ALLOC_NEST
+
+# if defined(WET_DRY)  
+  ! ALWAYS INITIALIZE WET DRY VARIABLE IF DEFINED
+  CALL ALLOC_WD_DATA
+# endif
+
+# if defined(SPHERICAL)
+  CALL ALLOC_SPHERE_VARS
+# endif
+
+# if defined (WATER_QUALITY)
+  CALL ALLOC_WQM_VARS
+# endif  
+
+# if defined (SEMI_IMPLICIT)
+  CALL ALLOC_VARS_SEMI
+# endif
+
+# if defined (NH)
+  CALL ALLOC_VARS_NH
+# endif
+
+   MEMTOT = MEMCNT*4
+# if defined (MULTIPROCESSOR)
+   IF(PAR)CALL MPI_REDUCE(MEMCNT,MEMTOT,1,MPI_F,MPI_SUM,0,MPI_FVCOM_GROUP,IERR)
+# endif
+
+   IF(DBG_SET(DBG_LOG)) THEN
+      WRITE(IPT,*)'!  # MBYTES TOTAL MEM    :',MEMTOT/1E+6
+      IF(PAR)WRITE(IPT,*)'!  # AVERAGE MBYTES/PROC :',MEMTOT/(1E+6*NPROCS)
+   END IF
+
+
+END SUBROUTINE ALLOCATE_ALL
+  

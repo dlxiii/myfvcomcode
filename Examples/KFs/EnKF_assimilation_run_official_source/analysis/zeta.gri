@@ -1,0 +1,353 @@
+# This program draws data position for each month for all the variables
+set page size letter
+set page portrait
+set font to TimesRoman
+set line  width 0.6
+set font size 12
+set symbol size 0.15
+  .XLL. = -57000
+  .XUR. = 57000
+  .YLL. = -57000
+  .YUR. = 57000
+set x margin 4.5
+set y margin 18.
+set x size 6.
+set y size 6
+set x axis .XLL. .XUR. 
+set y axis .YLL. .YUR. 
+set x name ""
+set y name ""
+draw axes none
+##########################    CONTOUR  #########################
+set clip postscript on .XLL. .XUR. .YLL. .YUR.
+.min. = 0.80
+.max. = 1.04
+.step. = 0.04
+draw axes none
+   open true_initial_day1_day2_zeta.grd
+        skip 1
+        read .nx. .ny.
+        read .xmin. .xmax.
+        read .ymin. .ymax.
+        set x grid .xmax. .xmin. / .nx.
+        set y grid .ymin. .ymax. / .ny.
+read grid data
+smooth grid data 
+smooth grid data
+smooth grid data
+smooth grid data
+smooth grid data
+smooth grid data
+smooth grid data
+smooth grid data
+       set image range .min. .max.
+       convert grid to image size 450 450
+set image colorscale hsb .6666 1 0.7 .min. hsb 0 1 1 .max. increment .step.
+
+       draw image
+#draw contour 0.8 1.04 0.04 unlabelled
+close
+
+
+#########    COAST LINE   ##########
+set color tan
+open island.dat
+read columns x=2 y=3
+draw curve filled
+set color black
+draw curve 
+close
+
+set clip postscript off
+set color black
+set color white
+open boundary.dat
+read columns x=1 y=2
+draw curve filled
+set color black
+draw curve 
+close
+
+set clip postscript off
+set color black
+##################   DATA POINTS   ##################
+
+########################## (2,1)   CONTOUR  #########################
+set y margin 11.5
+set clip postscript on .XLL. .XUR. .YLL. .YUR.
+.min. = 0.80
+.max. = 1.04
+.step. = 0.04
+draw axes none
+   open true_initial_day1_day2_zeta.grd
+        skip 1
+        read .nx. .ny.
+        read .xmin. .xmax.
+        read .ymin. .ymax.
+        set x grid .xmax. .xmin. / .nx.
+        set y grid .ymin. .ymax. / .ny.
+read grid data
+skip 4
+read grid data
+smooth grid data 
+smooth grid data
+smooth grid data
+smooth grid data
+smooth grid data
+smooth grid data
+smooth grid data
+smooth grid data
+       set image range .min. .max.
+       convert grid to image size 450 450
+set image colorscale hsb .6666 1 0.7 .min. hsb 0 1 1 .max. increment .step.
+
+       draw image
+#draw contour 0.8 1.04 0.04 unlabelled
+close
+
+
+#########    COAST LINE   ##########
+set color tan
+open island.dat
+read columns x=2 y=3
+draw curve filled
+set color black
+draw curve 
+close
+
+set clip postscript off
+set color black
+set color white
+open boundary.dat
+read columns x=1 y=2
+draw curve filled
+set color black
+draw curve 
+close
+
+set clip postscript off
+set color black
+##################   DATA POINTS   ##################
+##########################  (3,1)  CONTOUR  #########################
+set y margin 5
+set clip postscript on .XLL. .XUR. .YLL. .YUR.
+.min. = 0.80
+.max. = 1.04
+.step. = 0.04
+draw axes none
+   open true_initial_day1_day2_zeta.grd
+        skip 1
+        read .nx. .ny.
+        read .xmin. .xmax.
+        read .ymin. .ymax.
+        set x grid .xmax. .xmin. / .nx.
+        set y grid .ymin. .ymax. / .ny.
+read grid data
+skip 4
+read grid data
+skip 4
+read grid data
+smooth grid data 
+smooth grid data
+smooth grid data
+smooth grid data
+smooth grid data
+smooth grid data
+smooth grid data
+smooth grid data
+       set image range .min. .max.
+       convert grid to image size 450 450
+set image colorscale hsb .6666 1 0.7 .min. hsb 0 1 1 .max. increment .step.
+
+       draw image
+#draw contour 0.8 1.04 0.04 unlabelled
+close
+
+
+#########    COAST LINE   ##########
+set color tan
+open island.dat
+read columns x=2 y=3
+draw curve filled
+set color black
+draw curve 
+close
+
+set clip postscript off
+set color black
+set color white
+open boundary.dat
+read columns x=1 y=2
+draw curve filled
+set color black
+draw curve 
+close
+
+set clip postscript off
+set color black
+##################   DATA POINTS   ##################
+
+set x margin 11
+set y margin 18.
+########################## (1,2)   CONTOUR  #########################
+set clip postscript on .XLL. .XUR. .YLL. .YUR.
+draw axes none
+   open initial_zeta.grd
+        skip 1
+        read .nx. .ny.
+        read .xmin. .xmax.
+        read .ymin. .ymax.
+        set x grid .xmax. .xmin. / .nx.
+        set y grid .ymin. .ymax. / .ny.
+read grid data
+smooth grid data
+smooth grid data
+       set image range .min. .max.
+       convert grid to image size 450 450
+set image colorscale hsb .6666 1 0.7 .min. hsb 0 1 1 .max. increment .step.
+
+       draw image
+close
+
+
+#########    COAST LINE   ##########
+set color tan
+open island.dat
+read columns x=2 y=3
+draw curve filled
+set color black
+draw curve 
+close
+
+set clip postscript off
+set color black
+set color white
+open boundary.dat
+read columns x=1 y=2
+draw curve filled
+set color black
+draw curve 
+close
+
+set clip postscript off
+set color black
+##################   DATA POINTS   ##################
+
+
+
+
+ 
+set y margin 11.5
+########################## (2,2)   CONTOUR  #########################
+set clip postscript on .XLL. .XUR. .YLL. .YUR.
+draw axes none
+   open analysis_day1_day2_zeta.grd
+        skip 1
+        read .nx. .ny.
+        read .xmin. .xmax.
+        read .ymin. .ymax.
+        set x grid .xmax. .xmin. / .nx.
+        set y grid .ymin. .ymax. / .ny.
+read grid data
+smooth grid data
+smooth grid data
+       set image range .min. .max.
+       convert grid to image size 450 450
+set image colorscale hsb .6666 1 0.7 .min. hsb 0 1 1 .max. increment .step.
+
+       draw image
+close
+
+
+#########    COAST LINE   ##########
+set color tan
+open island.dat
+read columns x=2 y=3
+draw curve filled
+set color black
+draw curve 
+close
+
+set clip postscript off
+set color black
+set color white
+open boundary.dat
+read columns x=1 y=2
+draw curve filled
+set color black
+draw curve 
+close
+
+set clip postscript off
+set color black
+##################   DATA POINTS   ##################
+
+
+
+
+ 
+set y margin 5
+########################## (2,3)   CONTOUR  #########################
+set clip postscript on .XLL. .XUR. .YLL. .YUR.
+draw axes none
+   open analysis_day1_day2_zeta.grd
+        skip 1
+        read .nx. .ny.
+        read .xmin. .xmax.
+        read .ymin. .ymax.
+        set x grid .xmax. .xmin. / .nx.
+        set y grid .ymin. .ymax. / .ny.
+read grid data
+skip 4
+read grid data
+smooth grid data
+smooth grid data
+smooth grid data
+smooth grid data
+smooth grid data
+smooth grid data
+smooth grid data
+smooth grid data
+smooth grid data
+smooth grid data
+smooth grid data
+smooth grid data
+       set image range .min. .max.
+       convert grid to image size 450 450
+set image colorscale hsb .6666 1 0.7 .min. hsb 0 1 1 .max. increment .step.
+
+       draw image
+close
+
+
+#########    COAST LINE   ##########
+set color tan
+open island.dat
+read columns x=2 y=3
+draw curve filled
+set color black
+draw curve 
+close
+
+set clip postscript off
+set color black
+set color white
+open boundary.dat
+read columns x=1 y=2
+draw curve filled
+set color black
+draw curve 
+close
+
+set clip postscript off
+set color black
+##################   DATA POINTS   ##################
+set font size 8
+draw image palette left .min. right .max. increment .step. box 4.5 24.8 10.5 25
+draw image palette left .min. right .max. increment .step. box 11 24.8 17 25
+set font size 10
+draw label "True State" at 7 25.5 cm
+draw label "Analysis State" at 13 25.5 cm
+draw label "Initial" at 17.5 21 cm
+draw label "12 hour" at 17.5 14.5 cm
+draw label "24 hour" at 17.5 8 cm

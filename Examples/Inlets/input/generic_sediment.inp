@@ -1,0 +1,203 @@
+!==============================================================================!
+!   INPUT FILE FOR PARAMETERS CONTROLLING FVCOM SEDIMENT MODEL                 !
+!        FORMAT:			                                       !
+!       1.) VARIABLE  = VALUE  (EQUAL SIGN MUST BE USED)                       !
+!       2.) FLOATING POINT VARIABLES MUST CONTAIN A PERIOD "." EX: 1.3, 2.,etc !
+!       3.) BLANK LINES ARE IGNORED AS ARE LINES BEGINNING WITH ! (F90 COMMENT)!
+!       4.) COMMENTS CAN FOLLOW VALUES IF MARKED BY !                          !
+!       5.) ORDER OF VARIABLES IS NOT IMPORTANT                                !
+!       6.) FOR MULTIPLE VALUE VARIABLES FIRST ENTRY IS NUMBER OF VARIABLES    !
+!           TO FOLLOW (OR 0 IF NONE)                                           !
+!       7.) DO NOT USE COMMAS TO SEPARATE VARIABLES                            !
+!       8.) DO NOT EXCEED EIGHTY CHARACTERS PER LINE                           !
+!       9.)  TRUE = T, FALSE = F                                               !
+!                                                                              ! 
+!  THE PREVIOUS FORMAT OF "VARIABLE: VALUE" IS NO LONGER VALID                 !
+!  THE MORE ATTRACTIVE " = " FORMAT WAS SUGGESTED BY Hernan G. Arango          !
+!                                                                              !
+!------------------------------------------------------------------------------!
+! Sediment Module Dynamics Parameters
+!   BEDLOAD:  True of bedload is to be considered
+!   SUSLOAD:  True of suspended load is to be considered
+!------------------------------------------------------------------------------!
+
+SED_ONED = F
+SED_NUDGE = F
+SED_ALPHA = 0.5
+SED_RAMP  = 1
+SED_START = 361
+BEDLOAD = F
+SUSLOAD = T
+SED_PTSOURCE = T
+SED_HOT_START = F
+!------------------------------------------------------------------------------!
+! Morphodynamics (unstable - will not be activated)
+!  MORPHO_MODEL:  F => no bathy change, T => bathy changes to follow bottom
+!  MORPHO_FACTOR: amount bathy is changed relative to calculated accre/depo
+!                 = 0, no change, = 1, follows bottom exactly
+!  Caution, even if MORPHO_MODEL is F, MORPHO_FACTOR will still be active
+!     and affect the rate of sediment dep/ero and bedload flux
+!  MORPHO_INCR:  Update the bathymetry only every morpho_incr iterations of  
+!                internal time steps.  MORPHO_INCR > 10 can allow flow to adjust
+!                a bit before morphing.  
+!------------------------------------------------------------------------------!
+
+MORPHO_MODEL = T
+MORPHO_FACTOR = 10.0
+MORPHO_INCR   = 1
+MORPHO_STRT   = 0
+
+!------------------------------------------------------------------------------!
+! Sediment Settling Parameters 
+!   SETTLE_CFL: set the CFL number for the settling scheme [>0, 1]
+!   SETTLE_LIMITER: set the limiter type for the settling advection eq.
+!            =0:  1st order upwind
+!            =1:  minmod limiter
+!            =2:  Van Leer limiter
+!   
+!------------------------------------------------------------------------------!
+
+SETTLE_CFL = .8
+SETTLE_LIMITER = 1
+
+!------------------------------------------------------------------------------!
+! Sediment Module Reporting and Archiving Control 
+!   SED_DUMPBED: (T/F) Dump all the bed variables 
+!   SED_DUMPBOT: (T/F) Dump all the bottom variables 
+!------------------------------------------------------------------------------!
+
+N_REPORT = 50
+SED_DUMPBED = F
+SED_DUMPBOT = T
+
+!------------------------------------------------------------------------------!
+! Suspended Sediment Parameters
+!   NSED:   number of suspended sediments
+!   MIN_SRHO:   minimum sediment density                           [kg/m^3]
+!   SED_TYPE:   sediment type ('cohesive' or 'non-cohesive')
+!   SED_NAME:   sediment name             
+!   SED_SD50:   mean sediment diameter                             [mm     ]
+!   SED_SRHO:   sediment density                                   [kg/m^3 ]
+!   SED_WSET:   sediment settling velocity                         [mm/s   ]
+!   SED_ERAT:   surface erosion rate                               [kg/m2/s]
+!   SED_TAUE:   critical shear for erosion 			   [N/m^2  ]
+!   SED_TAUD:   critical shear for deposition 			   [N/m^2  ]
+!   SED_PORS:   porosity, Vwater/(Vwater+Vsed)                     [NON DIM] 
+!------------------------------------------------------------------------------
+
+NSED = 1
+MIN_SRHO = 1050.
+
+SED_NAME = coarse_sand
+SED_TYPE = non-cohesive
+SED_SD50 = 0.1
+SED_CSED = 0.0
+SED_SRHO = 2650.
+SED_WSET = 11. 
+SED_ERAT = 5.e-3
+SED_TAUE = .1
+SED_TAUD = .1
+SED_PORS = 0.5
+
+
+!------------------------------------------------------------------------------
+! Bed Parameters
+!   NBED:   number of bed layers
+!   INF_BED:    true if infinite supply of sediment is available   [logical]
+!   INIT_BED_POROSITY: initial bed porosity (spatially constant, if required
+!                     spatially variable, set in init_sed.F) [0-1]
+!   INIT_BED_THICKNESS: initial total thickness of the bed (m), can be overwritten
+!                   in init_sed.F if non-constant is desired.
+!------------------------------------------------------------------------------
+
+NBED    = 1
+INF_BED = T
+INIT_BED_POROSITY = 0.50
+INIT_BED_THICKNESS = 10.0
+INIT_BED_FRACTION = .166666 .1666666 .166666 .166666 .166666 .166666 
+
+!------------------------------------------------------------------------------
+! Bedload Model Parameters (Meyer-Peter Muller Formulation)
+!   MPM_CS:  critical shields parameter   
+!   MPM_GM:  MPM exponent                
+!   MPM_K :  MPM constant 
+!   BEDLOAD_RATE : Bed load rate coefficient (a fudge factor?)
+!   BEDLOAD_SMOOTH: Filter bedload function (can improve morphodynamic stability)
+!------------------------------------------------------------------------------
+
+MPM_CS = .047      !  suggested: .047
+MPM_GM = 1.5       !  suggested: 1.5 
+MPM_K  = 8.0       !  suggested: 8.0 
+BEDLOAD_RATE = 1.0 !
+BEDLOAD_SMOOTH = T
+
+
+
+
+!------------------------------------------------------------------------------
+!   The Options MB_Z0BL and MB_Z0RIP should be activated concurrently.        |
+!                                                                             !
+!  MB_BBL_USE        !  use if Meinte Blaas BBL closure                       !
+!  MB_CALC_ZNOT      !  use if computing bottom roughness internally          !
+!  MB_CALC_UB        !  use if computing bottom orbital velocity internally   !
+!  MB_Z0BIO          !  use if biogenic bedform roughness for ripples         !
+!  MB_Z0BL           !  use if bedload roughness for ripples                  !
+!  MB_Z0RIP          !  use if bedform roughness for ripples                  !
+!------------------------------------------------------------------------------ 
+
+MB_BBL_USE   = F
+MB_CALC_ZNOT = F
+MB_CALC_UB   = F
+MB_Z0BIO     = F
+MB_Z0BL      = F
+MB_Z0RIP     = F
+
+!------------------------------------------------------------------------------
+! OPTIONS for Styles and Glenn (2000) bottom boundary layer closure:          !
+!                                                                             !
+! SG_BBL_USE        !  use if Styles and Glenn (2000) BBL closure             !
+! SG_CALC_ZNOT      !  use if computing bottom roughness internally           !
+! SG_CALC_UB        !  use if computing bottom orbital velocity internally    !
+! SG_LOGINT         !  use if logarithmic interpolation of (Ur,Vr)            !
+!------------------------------------------------------------------------------
+
+SG_BBL_USE   = F
+SG_CALC_ZNOT = F
+SG_CALC_UB   = F
+SG_LOGINT    = F
+
+!------------------------------------------------------------------------------
+! OPTIONS for the Sherwood/Signell/Warner bottom boundary layer closure:      !
+!                                                                             !
+! SSW_BBL_USE       !  use if Sherwood et al. BBL closure                     !
+! SSW_CALC_ZNOT     !  use if computing bottom roughness internally           !
+! SSW_LOGINT        !  use if logarithmic interpolation of (Ur,Vr)            !
+! SSW_CALC_UB       !  use if computing bottom orbital velocity internally    !
+! SSW_FORM_DRAG_COR !  use to activate form drag coefficient                  !
+                    !  should be activated if using maximum shear stress      !
+                    !  under wave and current
+! SSW_ZOBIO         !  use if biogenic bedform roughness from ripples         !
+! SSW_ZOBL          !  use if bedload roughness for ripples                   !
+! SSW_ZORIP         !  use if bedform roughness from ripples                  !
+!                ---Only one method listed below can be activated.
+! SGWC              !  use Styles and Glenn (1999) method                     !
+! M94WC             !  use Madson(1994) method                                !
+!                ---Only one roughness listed below can be activated          ! 
+! GM82_RIPRUF       !  use Grant-Madson (1982) ripple roughness               !
+! N92_RIPRUF        !  use Nielsen (1992) ripple roughness                    !
+! R88_RIPRUF        !  use Raudkivi (1988) ripple roughness                   !
+!------------------------------------------------------------------------------
+
+SSW_BBL_USE       = T
+SSW_CALC_ZNOT     = T
+SSW_LOGINT        = F
+SSW_CALC_UB       = F
+SSW_FORM_DRAG_COR = F
+SSW_ZOBIO         = F
+SSW_ZOBL          = F
+SSW_ZORIP         = F
+SGWC              = F
+M94WC             = T
+GM82_RIPRUF       = F
+N92_RIPRUF        = T
+R88_RIPRUF        = F

@@ -1,0 +1,12 @@
+This is the case for 2D fluid mud expriment in tidal inlet system, with the coupling of 3D sediment transport model.
+
+1. This model is online driven by current and sediment.
+
+2. The sediment model is original CSTM sediment module (ORIG_SED flag in make.inc).
+
+3. The parameters for fluid mud are specified in offline_oneway_sediment.inp.
+
+4. It should be noted that the time step for 2D fluid mud could be specified in offline_oneway_sediment.inp (DTE_RATIO), which uausally configured as 1/DTE_RATIO*DTE.
+
+5. The thickness and motion velocities of fluid mud has been archived in default  output netcdf file. 
+

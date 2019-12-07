@@ -1,0 +1,21 @@
+ &NML_RIVER
+ RIVER_NAME                 = 'river1'
+ RIVER_FILE                 = 'River_data.nc'
+ RIVER_GRID_LOCATION        = 1569,
+ RIVER_VERTICAL_DISTRIBUTION = 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1
+ /
+
+ &NML_RIVER
+ RIVER_NAME                 = 'river2'
+ RIVER_FILE                 = 'River_data.nc'
+ RIVER_GRID_LOCATION        = 1567,
+ RIVER_VERTICAL_DISTRIBUTION = 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1
+ /
+
+ &NML_RIVER
+ RIVER_NAME                 = 'river3'
+ RIVER_FILE                 = 'River_data.nc'
+ RIVER_GRID_LOCATION        = 1565,
+ RIVER_VERTICAL_DISTRIBUTION = 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1
+ /
+
