@@ -49,6 +49,24 @@
  RST_OUT_INTERVAL = 'cycle = 500'                                         ,
  RST_OUTPUT_STACK =           0
  /
+
+ &NML_NETCDF_SURFACE
+ NCSF_ON = F,
+ NCSF_FIRST_OUT  = 'seconds=0.0'   ,
+ NCSF_OUT_INTERVAL       = 'second=3600.'  ,
+ NCSF_OUTPUT_STACK       =           0,
+ NCSF_SUBDOMAIN_FILES    = FVCOM,
+ NCSF_GRID_METRICS       = F,
+ NCSF_FILE_DATE  = F,
+ NCSF_VELOCITY   = F,
+ NCSF_SALT_TEMP  = F,
+ NCSF_TURBULENCE = F,
+ NCSF_WIND_VEL   = F,
+ NCSF_WIND_STRESS        = F,
+ NCSF_EVAP_PRECIP        = F,
+ NCSF_SURFACE_HEAT       = F
+ /
+
  &NML_NETCDF
  NC_ON   = T,
  NC_FIRST_OUT    = 'seconds=0.0',

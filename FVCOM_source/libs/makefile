@@ -6,18 +6,19 @@
 
 MYINSTALLDIR = $(INSTALLDIR)
 
-PACKAGES =	proj	fproj	julian	metis	netcdf	
+PACKAGES =	proj	fproj	julian	metis	#netcdf	
 
 
 all:
 	for item in $(PACKAGES); do (./untar.sh $$item ) || exit 1; done
-	cd proj && ./configure CC=$(CC) CFLAGS=-O3 CXX=$(CC) CXXFLAGS=-O3 F77=$(FC) FFLAGS=-O3 --prefix=$(MYINSTALLDIR)
+	cd proj && ./configure CC=$(CC) CFLAGS=-O3 CXX=$(CXX) CXXFLAGS=-O3 F77=$(FC) FFLAGS=-O3 --prefix=$(MYINSTALLDIR)
 	cd proj && make install
 	cd fproj && ./configure CPPFLAGS='$(COMPILER)' CC=$(CC) CFLAGS=-O3 CXX=$(CXX) CXXFLAGS=-O3 FC=$(FC) FFLAGS=-O3 --with-proj4=$(MYINSTALLDIR) --prefix=$(MYINSTALLDIR)
 	cd fproj && make install
-	cd netcdf && ./configure CC=$(CC) CFLAGS=-O3 CXX=$(CC) CXXFLAGS=-O3 F77=$(FC) F90=$(FC) FFLAGS=-O3 --prefix=$(MYINSTALLDIR) --build=$(MACHTYPE)
-	cd netcdf && make install
-#	cd metis && make install
+#	cd netcdf && ./configure CC=$(CC) CFLAGS=-O3 CXX=$(CXX) CXXFLAGS=-O3 F77=$(FC) F90=$(FC) FFLAGS=-O3 --prefix=$(MYINSTALLDIR) --build=$(MACHTYPE)
+# cd netcdf && ./configure CC=$(CC) CFLAGS=-O3 CXX=$(CXX) CXXFLAGS=-O3 F77=$(FC) F90=$(FC) FFLAGS=-O3 --prefix=$(MYINSTALLDIR) --build=$(MACHTYPE) --disable-cxx
+#	cd netcdf && make install
+	cd metis && make install
 	cd julian && make install
 
 
@@ -31,3 +32,4 @@ clobber:
 
 includes::
 include ../make.inc
+#include /home/usr0/n70110d/works/fvcom_case/tkb_20181202/run/make.inc
