@@ -417,46 +417,56 @@ PROGRAM FVCOM
 
 # if defined (DATA_ASSIM)
   USE MOD_ASSIM
-# endif  
+# endif
+
   USE MOD_NESTING
 
   USE MOD_REPORT
+
 # if defined (LAG_PARTICLE)
   USE MOD_LAG
 # endif
+
   USE PROBES
   USE MOD_BOUNDSCHK !bounds checking
+
 # if defined (SEMI_IMPLICIT)
   USE MOD_SEMI_IMPLICIT
 # endif
+
 # if defined (BALANCE_2D)
   USE MOD_BALANCE_2D
-# endif  
+# endif
+
 # if defined (ONE_D_MODEL)
   USE MOD_ONEDTIDE
 # endif
+
 # if defined (WATER_QUALITY)
   USE MOD_WQM
-# endif    
+# endif
+
 # if defined (BioGen)
   USE MOD_BIO_3D
-# endif    
+# endif
+
 # if defined (DYE_RELEASE)
   USE MOD_DYE
 # endif
+
 # if defined (RRKF)
    USE RRKVAL
    USE MOD_RRK
    USE MOD_RRKA
    USE MOD_RRKF_OBS
 # endif
+
 # if defined (ENKF)  
    USE ENKFVAL 
    USE MOD_ENKF
    USE MOD_ENKFA
    USE MOD_ENKF_OBS
 # endif
-
 
 # if defined (GOTM)
   USE MOD_GOTM 
@@ -488,8 +498,8 @@ PROGRAM FVCOM
   USE MOD_PETSc, ONLY : PETSc_SET, PETSc_CLEANUP
 # endif
 
-! for periodic lateral boundary conditions
 # if defined (PLBC)
+  ! for periodic lateral boundary conditions
   USE MOD_PERIODIC_LBC
 # endif
 
@@ -498,7 +508,7 @@ PROGRAM FVCOM
   USE SWCOMM3
   USE VARS_WAVE
   USE MOD_WAVE_CURRENT_INTERACTION
-# endif 
+# endif
 
 
 # if defined (WAVE_CURRENT_INTERACTION) && (SEDIMENT)
@@ -530,6 +540,7 @@ PROGRAM FVCOM
   CHARACTER(LEN=4)  :: RRKINP2
   CHARACTER(LEN=100)::  MKDIR
 # endif
+
   INTEGER :: IERR
 
   type(watch) Timer
@@ -562,7 +573,6 @@ PROGRAM FVCOM
   !==============================================================================!
   ! SET DEFAULT VALUES AND READ NAME LISTS                                            
   !==============================================================================!
-
   CALL NAMELIST
 
   !==============================================================================!
@@ -599,12 +609,15 @@ PROGRAM FVCOM
   !   ALLOCATE ALL DOMAIN SIZE VARIABLES HERE                                    !
   !==============================================================================!
   CALL ALLOCATE_ALL
+
 # if defined (DYE_RELEASE)
   CALL ALLOC_VARS_DYE
 # endif
+
 # if defined (BALANCE_2D)
   CALL ALLOC_BALANCE_VARS
-# endif    
+# endif
+
   !==============================================================================!
   !   LOAD/SETUP PHYSICAL QUANTITIES (CORIOLIS, GRAVITY, SPONGE LAYER, XY/LATLON)!
   !==============================================================================!
@@ -622,7 +635,6 @@ PROGRAM FVCOM
    IF(SEDIMENT_MODEL) &
   &  CALL SETUP_SED(SEDIMENT_MODEL_FILE,IOBCN,IOBCN_GL,N_SED,N_SED_MAX,SED_NAMES)
 #  endif
-
 
 !JQI  !==============================================================================!
 !JQI  !  SETUP THE MODEL FORCING                                                     !
@@ -650,12 +662,11 @@ PROGRAM FVCOM
   !==============================================================================!
   !  SETUP OTHER TOOLS, MODELS AND DATA ASSIMILATION                             !
   !==============================================================================!
-
 # if defined (ICE)
   IF(ICE_MODEL) CALL ICE_INIT_0
 # endif
 
-  !  SETUP PETSc FOR SEMI_IMPLICIT AND NON-HYDROSTATIC MODULE
+!  SETUP PETSc FOR SEMI_IMPLICIT AND NON-HYDROSTATIC MODULE
 # if defined (SEMI_IMPLICIT) || (NH) || (defined (WAVE_CURRENT_INTERACTION) && !defined (EXPLICIT))
   CALL PETSc_SET
 # endif
@@ -677,14 +688,14 @@ PROGRAM FVCOM
    CALL INIT_BBL
 # endif
 
-
-  ! SETUP DATA ASSIMILATION MODE
+! SETUP DATA ASSIMILATION MODE
 # if defined (DATA_ASSIM) 
   CALL SETUP_DATA_ASSIMILATION
 # if defined (PWP)
   CALL SETUP_PWP
 # endif
 # endif
+
 #  if defined (ENKF)
    if(msr)  print *, 'before enkf_set_time'
      CALL ENKF_SET_TIME
@@ -693,6 +704,7 @@ PROGRAM FVCOM
    if(msr)  print *, 'finish enkf_set_time'
      !check point done
 #  endif
+
 ! New Open Boundary Condition ----2
 #  if defined (MEAN_FLOW)
      CALL FIND_OBSIDE
@@ -704,9 +716,9 @@ PROGRAM FVCOM
      CALL ALLOC_OBC2_DATA
      IF(MSR)WRITE(IPT,*)'OBC2_DATA COMPLETED....'
      MF_RST_STCNT = 0
-#    endif
-#  if defined (RRKF)
+#  endif
 
+#  if defined (RRKF)
      CALL RRK_SET_TIME
      print *, 'finish rrkf_set_time'
 !=============================================================
@@ -735,7 +747,6 @@ PROGRAM FVCOM
     print *, 'finish read_TS'
 !  END IF
 # else
-
   !==============================================================================!
   !  SET THE INITIAL CONDITIONS FOR THE MODEL                                    !
   !==============================================================================!
@@ -746,7 +757,6 @@ PROGRAM FVCOM
 !  GET_BEGIN = READ_DATETIME('2009-01-01T00:00:00.0','ymd','UTC',status)
 !  CALL PRINT_TIME(GET_BEGIN,IPT,'2009-01-01T00:00:00.0')
 !qxu}
-
   !==============================================================================!
   !  CALL ARCHIVE TO SETUP THE OUTPUT AND DUMP CONSTANT VALUES                   !
   !==============================================================================!
@@ -755,6 +765,7 @@ PROGRAM FVCOM
   CALL ARCHIVE
   ! ORDER MATTERS - ARCHIVE_NEST MUST GO AFTER ARCHIVE DURING SETUP!
   CALL ARCHIVE_NEST
+
 # if defined(ENKF)
    enkf_out_Time=NC_DAT%FTIME%NEXT_IO
    DO ENKF_memberCONTR =1, ENKF_NENS
@@ -762,16 +773,17 @@ PROGRAM FVCOM
     IF(NC_ON)THEN
              call    ENKF_SETUP_NC(NC_DAT)
              IF (ENKF_memberCONTR == ENKF_NENS) ARCHIVE_TIMES=ARCHIVE_TIMES+1
-
     END IF
    END DO
 # endif
+
 # if defined (WAVE_CURRENT_INTERACTION)
   CALL ARCHIVE_NEST_WAVE
 # endif
 
   CALL SET_PROBES(PROBES_ON,PROBES_NUMBER,PROBES_FILE)
   IF(OUT_STATION_TIMESERIES_ON)CALL READ_STATION_FILE
+
 # if defined (WAVE_CURRENT_INTERACTION)
   IF(OUT_WAVE_SPARSE_TIMESERIES_ON)CALL SPARSE_STATION
 # endif
@@ -792,6 +804,7 @@ PROGRAM FVCOM
     CALL OUT_STATION_TIMESERIES
     TIME_SERIES = STARTTIME + INTERVAL_TIME_SERIES
   END IF
+
 # if defined (WAVE_CURRENT_INTERACTION)
   IF(OUT_WAVE_SPARSE_TIMESERIES_ON)THEN
     CALL GET_OUTPUT_FILE_INTERVAL(TRIM(OUT_INTERVAL_SPARSE),WAVE_INTERVAL_TIME_SERIES)
@@ -799,6 +812,7 @@ PROGRAM FVCOM
     WAVE_TIME_SERIES = STARTTIME + WAVE_INTERVAL_TIME_SERIES
   END IF
 # endif
+
   !==============================================================================!
   !  SELECT THE RUN MODE AND EXECUTE THE MAIN LOOP
   !==============================================================================!
@@ -809,7 +823,6 @@ PROGRAM FVCOM
      ! == PURE SIMULATION MODE - Instantanious data assimilation only ==============!
   CASE(FVCOM_PURE_SIM)
      ! =============================================================================!
-
 
      !==============================================================================!
      !  PREPARE TO START FVCOM'S MAIN LOOP                                          !
@@ -870,9 +883,11 @@ PROGRAM FVCOM
 
         CALL DUMP_PROBE_DATA
         IF(OUT_STATION_TIMESERIES_ON)CALL OUT_STATION_TIMESERIES
+
 # if defined (WAVE_CURRENT_INTERACTION)
         IF(OUT_WAVE_SPARSE_TIMESERIES_ON) CALL OUT_WAVE_SPARSE_TIMESERIES
 # endif
+
         !==============================================================================!
         !  CALL SHUTDOWN CHECK TO LOOK FOR BAD VALUES                                  !
         !==============================================================================!
@@ -894,6 +909,7 @@ PROGRAM FVCOM
         !    NESTING OUTPUT                                                            |
         !==============================================================================!
         IF(NCNEST_ON)      CALL ARCHIVE_NEST
+        
 #       if defined (WAVE_CURRENT_INTERACTION)
         IF(NCNEST_ON_WAVE) CALL ARCHIVE_NEST_WAVE
 #       endif
@@ -1062,6 +1078,7 @@ PROGRAM FVCOM
         ELSEIF(TS_NGASSIM .OR. CUR_NGASSIM .OR. TS_OIASSIM .OR. CUR_OIASSIM)THEN
           IntTime = ASSIM_RESTART_TIME
         END IF
+
         !==============================================================================!
         !    RUN DATA ASSIMILATION MODE:
         !==============================================================================!
@@ -1488,8 +1505,8 @@ PROGRAM FVCOM
 
 
 ! #####################################################################################
-  
 # endif
+
   CASE(FVCOM_RRKF_WITH_SSA)
 # if defined (RRKF)
 # if defined (DATA_ASSIM) 
