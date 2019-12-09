@@ -41,12 +41,12 @@
 .F.o:
 	$(CPP) $(CPPARGS) $(PETSC_FC_INCLUDES) $*.F > $*.f90
 	$(FC)  -c $(FFLAGS) $(INCS) $*.f90
-	\rm $*.f90
+#	\rm $*.f90
 
 .F90.o:
 	$(CPP) $(CPPFLAGS) $(CPPDEFS) $(INCLDIR) $< > $*.f  
 	$(FC) -c $(FFLAGS) $(FIXEDFLAGS) $(INCS) $(INCLDIR) $*.f  
-	\rm $*.f90
+#	\rm $*.f90
 
 
 #--------------------------------------------------------------------------
