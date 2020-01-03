@@ -1,3 +1,14 @@
 *.o
 *.mod
 .DS_Store
+.a
+.c
+.in
+.h
+FVCOM_source/libs/fproj/*
+FVCOM_source/libs/install/*
+FVCOM_source/libs/julian/*
+FVCOM_source/libs/metis/*
+FVCOM_source/libs/proj/*
+FVCOM_source/fvcom
+FVCOM_source/libfvcom.a
