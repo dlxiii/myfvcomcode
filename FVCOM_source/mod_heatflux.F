@@ -52,49 +52,73 @@ MODULE MOD_HEATFLUX
    REAL(SP) :: AIR_TEMPERATURE
    REAL(SP) :: RELATIVE_HUMIDITY
    REAL(SP) :: SURFACE_PRESSURE
-# if defined (DLW_CALCULATED)	
 ! YULONG WANG 20201027==>
+# if defined (DLW_CALCULATED)	
    REAL(SP) :: CLOUD_COVERAGE
 # else		
-   REAL(SP) :: LONGWAVE_RADIATION
-! YULONG WANG 20201027<==   
+   REAL(SP) :: LONGWAVE_RADIATION  
 # endif
+! YULONG WANG 20201027<== 
    REAL(SP) :: SHORTWAVE_RADIATION
    REAL(SP) :: HEATING_LONGWAVE_PERCTAGE_IN_HEATFLUX
    REAL(SP) :: HEATING_LONGWAVE_LENGTHSCALE_IN_HEATFLUX
    REAL(SP) :: HEATING_SHORTWAVE_LENGTHSCALE_IN_HEATFLUX
-   
-   NAMELIST /NML_HEATING_CALCULATED/           &
-        & HEATING_CALCULATE_ON,                &
-	    & HEATING_CALCULATE_TYPE,              &
-	    & HEATING_CALCULATE_FILE,              &
-	    & HEATING_CALCULATE_KIND,              &
-        & HEATING_FRESHWATER,                  &
-	    & COARE_VERSION,                       &
-	    & ZUU,                                 &
-	    & ZTT,                                 &
-	    & ZQQ,                                 &
-	    & AIR_TEMPERATURE,                     &
-	    & RELATIVE_HUMIDITY,                   &
-	    & SURFACE_PRESSURE,                    &
-# if defined (DLW_CALCULATED)	
+
 ! YULONG WANG 20201027==>
-		& CLOUD_COVERAGE,                      &
+# if defined (DLW_CALCULATED) 
+   NAMELIST /NML_HEATING_CALCULATED/           &
+      & HEATING_CALCULATE_ON,                &
+      & HEATING_CALCULATE_TYPE,              &
+      & HEATING_CALCULATE_FILE,              &
+      & HEATING_CALCULATE_KIND,              &
+      & HEATING_FRESHWATER,                  &
+      & COARE_VERSION,                       &
+      & ZUU,                                 &
+      & ZTT,                                 &
+      & ZQQ,                                 &
+      & AIR_TEMPERATURE,                     &
+      & RELATIVE_HUMIDITY,                   &
+      & SURFACE_PRESSURE,                    &
+      & CLOUD_COVERAGE,                      &
+      & SHORTWAVE_RADIATION,                 &
+      & HEATING_LONGWAVE_PERCTAGE_IN_HEATFLUX,    &
+      & HEATING_LONGWAVE_LENGTHSCALE_IN_HEATFLUX, &
+      & HEATING_SHORTWAVE_LENGTHSCALE_IN_HEATFLUX
+
 # else
-	    & LONGWAVE_RADIATION,                  &
-! YULONG WANG 20201027<==   
+
+   NAMELIST /NML_HEATING_CALCULATED/           &
+      & HEATING_CALCULATE_ON,                &
+      & HEATING_CALCULATE_TYPE,              &
+      & HEATING_CALCULATE_FILE,              &
+      & HEATING_CALCULATE_KIND,              &
+      & HEATING_FRESHWATER,                  &
+      & COARE_VERSION,                       &
+      & ZUU,                                 &
+      & ZTT,                                 &
+      & ZQQ,                                 &
+      & AIR_TEMPERATURE,                     &
+      & RELATIVE_HUMIDITY,                   &
+      & SURFACE_PRESSURE,                    &
+      & LONGWAVE_RADIATION,                  &
+      & SHORTWAVE_RADIATION,                 &
+      & HEATING_LONGWAVE_PERCTAGE_IN_HEATFLUX,    &
+      & HEATING_LONGWAVE_LENGTHSCALE_IN_HEATFLUX, &
+      & HEATING_SHORTWAVE_LENGTHSCALE_IN_HEATFLUX
+
 # endif
-	    & SHORTWAVE_RADIATION,                 &
-        & HEATING_LONGWAVE_PERCTAGE_IN_HEATFLUX,    &
-        & HEATING_LONGWAVE_LENGTHSCALE_IN_HEATFLUX, &
-        & HEATING_SHORTWAVE_LENGTHSCALE_IN_HEATFLUX
+! YULONG WANG 20201027<== 
    
    REAL(SP), ALLOCATABLE :: CORRG(:),CORR(:)           !!LATITUDE OF NODES
+! YULONG WANG 20201027==>
+# if !defined (DLW_CALCULATED)
    REAL(SP), ALLOCATABLE :: RAIN(:),CP40(:),SIGH(:),ZI40(:)
-   REAL(SP), ALLOCATABLE :: USRCOARE(:)              !MDR 3-19-2013 for wind wave mix
+   REAL(SP), ALLOCATABLE :: USRCOARE(:)              !MDR 3-19-2013 for wind wave mix	
    REAL(SP), PARAMETER :: emmiss = 0.97_SP           ! ejw 8/16/2006 based on ROMS
    REAL(SP), PARAMETER :: StefBo = 5.67e-8_SP        ! ejw 8/16/2006 based on ROMS
    REAL(SP), PARAMETER :: fmiss  = -9999._SP
+# endif
+! YULONG WANG 20201027<== 
 
 !==============================================================================|
 
@@ -133,14 +157,14 @@ MODULE MOD_HEATFLUX
    ZQQ                    = 2  ! Unit = m                                 
    AIR_TEMPERATURE        = 0.0_SP                     
    RELATIVE_HUMIDITY      = 0.0_SP                   
-   SURFACE_PRESSURE       = 0.0_SP     
-# if defined (DLW_CALCULATED)		
+   SURFACE_PRESSURE       = 0.0_SP    
 ! YULONG WANG 20201027==>
+# if defined (DLW_CALCULATED)		
    CLOUD_COVERAGE         = 0.0_SP
 # else
    LONGWAVE_RADIATION     = 0.0_SP
-! YULONG WANG 20201027<==   
-# endif               
+# endif   
+! YULONG WANG 20201027<==               
    SHORTWAVE_RADIATION    = 0.0_SP
    HEATING_LONGWAVE_PERCTAGE_IN_HEATFLUX = 0.78_SP
    HEATING_LONGWAVE_LENGTHSCALE_IN_HEATFLUX = 1.4_SP
