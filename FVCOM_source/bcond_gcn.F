@@ -716,6 +716,12 @@
          HLAT_WATTS = HLAT_WATTS * RAMP
          LWRAD_WATTS = LWRAD_WATTS * RAMP
 
+! YULONG WANG 20201027==>
+# if defined (DLW_CALCULATED)
+	       SPCP=3.93E3_SP
+           ROSEA = 1.023E3_SP
+           SPRO = SPCP*ROSEA
+# else	
          IF(.NOT. HEATING_FRESHWATER)THEN
 	       SPCP=4.2174E3_SP
            ROSEA = 1.023E3_SP
@@ -725,6 +731,8 @@
            ROSEA = 1.000E3_SP
            SPRO = SPCP*ROSEA
 	    END IF  
+# endif	 
+! YULONG WANG 20201027<==
          
          WTSURF    = -WTSURF_WATTS/SPRO
          SWRAD     = -SWRAD_WATTS/SPRO
