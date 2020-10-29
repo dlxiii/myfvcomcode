@@ -717,14 +717,14 @@
          LWRAD_WATTS = LWRAD_WATTS * RAMP
 
          IF(.NOT. HEATING_FRESHWATER)THEN
-	   SPCP=4.2174E3_SP
+	       SPCP=4.2174E3_SP
            ROSEA = 1.023E3_SP
            SPRO = SPCP*ROSEA
          ELSE
            SPCP= 4.186E3_SP
            ROSEA = 1.000E3_SP
            SPRO = SPCP*ROSEA
-	 END IF  
+	    END IF  
          
          WTSURF    = -WTSURF_WATTS/SPRO
          SWRAD     = -SWRAD_WATTS/SPRO
@@ -736,7 +736,7 @@
 # endif
 
       END IF
-# endif      
+# endif 
 # if defined (HEATING_SOLAR)
       IF (HEATING_SOLAR_ON) THEN
       !EJA edit - add HS,HL,RLN - 05/03/2016
