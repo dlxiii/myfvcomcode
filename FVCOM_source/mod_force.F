@@ -255,7 +255,7 @@ MODULE MOD_FORCE
 # if defined (DLW_CALCULATED)
   TYPE(NCVAR), POINTER :: CLD_COV_N, CLD_COV_P
 # else	   
-  TYPE(NCVAR), POINTER :: DLW_AIR_N, DLW_AIR_P   	
+  TYPE(NCVAR), POINTER :: DLW_AIR_N, DLW_AIR_P
 # endif	 
 ! YULONG WANG 20201027<==
   TYPE(NCVAR), POINTER :: DSW_AIR_N, DSW_AIR_P   
@@ -519,11 +519,11 @@ CONTAINS
 # if defined (DLW_CALCULATED)	
     NULLIFY(HEAT_FILE,HEAT_INTP_N, HEAT_INTP_C, T_AIR_P, T_AIR_N,  &
          &  RH_AIR_P, RH_AIR_N, PA_AIR_P, PA_AIR_N, CLD_COV_P,     &
-	 &  CLD_COV_N, DSW_AIR_P, DSW_AIR_N)
+         &  CLD_COV_N, DSW_AIR_P, DSW_AIR_N)
 # else
     NULLIFY(HEAT_FILE,HEAT_INTP_N, HEAT_INTP_C, T_AIR_P, T_AIR_N,  &
          &  RH_AIR_P, RH_AIR_N, PA_AIR_P, PA_AIR_N, DLW_AIR_P,     &
-	 &  DLW_AIR_N, DSW_AIR_P, DSW_AIR_N)
+         &  DLW_AIR_N, DSW_AIR_P, DSW_AIR_N)
 # endif	
 ! YULONG WANG 20201027<==
 # endif	 
@@ -6315,32 +6315,36 @@ CONTAINS
    END IF
 #  endif
    DEALLOCATE(CORRG)
-   
+
+! YULONG WANG 20201027==>																														   
+# if !defined (DLW_CALCULATED)   
    IF(TRIM(COARE_VERSION) == 'COARE40VN')THEN
      ALLOCATE(RAIN(0:MT)) ; RAIN = 0.0_SP
      ALLOCATE(CP40(0:MT)) ; CP40 = 0.0_SP
      ALLOCATE(SIGH(0:MT)) ; SIGH = 0.0_SP
      ALLOCATE(ZI40(0:MT)) ; ZI40 = 0.0_SP
-   END IF   
+   END IF
    
    IF(HEATING_FRESHWATER)THEN
      ALLOCATE(USRCOARE(0:MT)) ; USRCOARE = 0.0_SP
-   END IF  
+   END IF
+# endif
+! YULONG WANG 20201027<==	
 !----------------------------REPORT--------------------------------------------!
    IF(MSR)WRITE(IPT,*)'!'
    IF(MSR)WRITE(IPT,*)'!            SETTING UP PRESCRIBED BOUNDARY CONDITIONS  '
    IF(MSR)WRITE(IPT,*)'!'
 
-!==============================================================================|
-!   Input Meteorological Boundary Conditions for Calculating Heat Flux         |
-!==============================================================================|
-!    bulk air temperature at height 2m:   degree(C)    "t_air"                 |
-!    relative humidity at height 2m:      (%)          "rh_air"                |
-!    surface pressure:                    mb           "pa_air"                |
-!    downward longwave radiation:         w/m^2        "dlw_air"    if DLW_CALCULATED is OFF|
-!    cloud cover:                         (0-1)        "cld_cov"    if DLW_CALCULATED is ON |
-!    downward shortwave radiation:        w/m^2        "dsw_air"               |
-!==============================================================================|
+!===========================================================================================|
+!   Input Meteorological Boundary Conditions for Calculating Heat Flux                      |
+!===========================================================================================|
+!    bulk air temperature at height 2m:   degree(C)    "t_air"                              |
+!    relative humidity at height 2m:      (%)          "rh_air"                             |
+!    surface pressure:                    mb           "pa_air"                             |
+!    downward longwave radiation:         w/m^2        "dlw_air"    if DLW CALCULATED is OFF|
+!    cloud cover:                         (0-1)        "cld_cov"    if DLW CALCULATED is ON |
+!    downward shortwave radiation:        w/m^2        "dsw_air"                            |
+!===========================================================================================|
 
     ! DETERMINE HOW TO LOAD THE DATA
     SELECT CASE(HEATING_CALCULATE_KIND)
@@ -6350,7 +6354,7 @@ CONTAINS
        write(pa_airstrng,'(f8.4)')  SURFACE_PRESSURE
 ! YULONG WANG 20201027==>																														   
 # if defined (DLW_CALCULATED)
-	   write(cld_covstrng,'(f8.4)') CLOUD_COVERAGE
+       write(cld_covstrng,'(f8.4)') CLOUD_COVERAGE
 # else			 
        write(dlw_airstrng,'(f8.4)') LONGWAVE_RADIATION
 # endif
@@ -6366,7 +6370,7 @@ CONTAINS
 # if defined (DLW_CALCULATED)															  
           WRITE(IPT,*)"          Cloud Coverage Rate: "//trim(cld_covstrng)
 # else
-		  WRITE(IPT,*)"  Downward Longwave Radiation: "//trim(dlw_airstrng)
+          WRITE(IPT,*)"  Downward Longwave Radiation: "//trim(dlw_airstrng)
 # endif
 ! YULONG WANG 20201027<==	
           WRITE(IPT,*)" Downward shortwave Radiation: "//trim(dsw_airstrng)
@@ -6381,7 +6385,7 @@ CONTAINS
 # if defined (DLW_CALCULATED)																  
        HEAT_CALCULATE_COMMENTS(5) = "Cloud Coverage Rate:"//trim(cld_covstrng)
 # else
-	   HEAT_CALCULATE_COMMENTS(5) = "Downward Longwave Radiation:"//trim(dlw_airstrng)
+       HEAT_CALCULATE_COMMENTS(5) = "Downward Longwave Radiation:"//trim(dlw_airstrng)
 # endif
 ! YULONG WANG 20201027<==	
        HEAT_CALCULATE_COMMENTS(6) = "Downward Shortwave Radiation:"//trim(dsw_airstrng)
@@ -12460,6 +12464,11 @@ CONTAINS
     TYPE(TIME)                :: HTIME
     REAL(SP), ALLOCATABLE     :: HEAT_SWV(:), HEAT_NET(:)
     REAL(SP), ALLOCATABLE     :: HEAT_SENSIBLE(:), HEAT_LATENT(:), HEAT_RLN(:)
+! YULONG WANG 20201027==>
+# if defined (DLW_CALCULATED)
+    REAL(SP)                  :: DLW_AIR
+# endif
+! YULONG WANG 20201027<==
     TYPE(NCFTIME), POINTER    :: FTM
     INTEGER                   :: STATUS,I,J
     REAL(SP), POINTER         :: VNP(:), VPP(:)
@@ -12578,42 +12587,23 @@ CONTAINS
 ! YULONG WANG 20201027==>
 # else
 		IF(TRIM(COARE_VERSION) == 'BULKALGORITHM')THEN
-			RAIN(I) = QPREC(I)*3600*1000  ! change unit to mm/hr  from m/s
-			ZI40 = fmiss
-			CP40 = 0.0_SP
-			SIGH = 0.0_SP
-			CALL BULKALGORITHM(WDS,T_AIR(I),RH_AIR(I),PA_AIR(I),T1(I,1),CLD_COV(I)  &
-							   DLW_AIR(I),DSW_AIR(I),HSB,HLB) 
-
-			IF(.NOT. HEATING_FRESHWATER)THEN		
-				t1k=t1(i,1)+273.16_sp
-				ulw_airf=-emmiss*StefBo*t1k*t1k*t1k*t1k
-				HEAT_NET(I) = DLW_AIR(I)+DSW_AIR(I)+HSB+HLB+ulw_airf        ! ejw 8/16/2006 based on ROMS
-				HEAT_SWV(I)  = DSW_AIR(I)
-				!EJA edit - output sensible and latent heat flux
-				HEAT_SENSIBLE(I) = HSB
-				HEAT_LATENT(I) = HLB
-				!g.l. 10/10/2017         HEAT_RLN(I)  = DLW_AIR(I)
-				HEAT_RLN(I)  = DLW_AIR(I)+ulw_airf	     
-			ELSE
-				USRCOARE(I) = USR !MDR 3-19-2013 for wind wave mix
-				!             t1k=t1(i,1)+273.16_sp !MDR 4-24-2013
-				t1k=t1(i,1)-DTER+273.16_sp !MDR 4-24-2013, include cool skin adjustment to surface temp
-				!MDR         ulw_airf=-emmiss*StefBo*t1k*t1k*t1k*t1k
-				!MDR         HEAT_NET(I) = DLW_AIR(I)+DSW_AIR(I)+HSB+HLB+ulw_airf        ! ejw 8/16/2006 based on ROMS
-				ulw_airf=-StefBo*t1k*t1k*t1k*t1k
-				HEAT_NET(I) = DSW_AIR(I)+HSB+HLB+emmiss*(DLW_AIR(I)+ulw_airf) !MDR, apply emmiss to NET long wave, as in COARE     
-				HEAT_SWV(I)  = DSW_AIR(I)
-				!EJA edit - output sensible and latent heat flux
-				HEAT_SENSIBLE(I) = HSB
-				HEAT_LATENT(I) = HLB
-				!g.l. 10/10/2017         HEAT_RLN(I)  = DLW_AIR(I)
-				HEAT_RLN(I)  = emmiss*(DLW_AIR(I)+ulw_airf)	     
-			END IF  
+        CALL BULKALGORITHM(WDS,T_AIR(I),RH_AIR(I),PA_AIR(I),T1(I,1),CLD_COV(I), &
+        DLW_AIR,HSB,HLB)
+        HEAT_NET(I) = DLW_AIR+DSW_AIR(I)*0.91+HSB+HLB
+        HEAT_SWV(I)  = DSW_AIR(I)*0.91
+        HEAT_SENSIBLE(I) = HSB
+        HEAT_LATENT(I) = HLB
+        HEAT_RLN(I)  = DLW_AIR
 # endif
 ! YULONG WANG 20201027<==
 		ELSE
-			CALL FATAL_ERROR("The value of COARE_VERSION should be 'COARE26Z' or 'COARE40VN'")
+! YULONG WANG 20201027==>                                                              
+# if defined (DLW_CALCULATED)
+      CALL FATAL_ERROR("The value of COARE_VERSION should be 'BULKALGORITHM'")
+# else
+      CALL FATAL_ERROR("The value of COARE_VERSION should be 'COARE26Z' or 'COARE40VN'")
+# endif
+! YULONG WANG 20201027<==
 		END IF  
 	END DO
 
@@ -12804,42 +12794,23 @@ CONTAINS
 ! YULONG WANG 20201027==>
 # else
 		IF(TRIM(COARE_VERSION) == 'BULKALGORITHM')THEN
-			RAIN(I) = QPREC(I)*3600*1000  ! change unit to mm/hr  from m/s
-			ZI40 = fmiss
-			CP40 = 0.0_SP
-			SIGH = 0.0_SP
-			CALL BULKALGORITHM(WDS,ZUU,T_AIR(I),ZTT,RH_AIR(I),ZQQ,PA_AIR(I),T1(I,1),  &
-			DLW_AIR(I),DSW_AIR(I),TAU,HSB,HLB,CORR(I),ZI40(I),RAIN(I),CP40(I),SIGH(I),fmiss,USR,DTER) !MDR include USR, DTER
-
-			IF(.NOT. HEATING_FRESHWATER)THEN		
-				t1k=t1(i,1)+273.16_sp
-				ulw_airf=-emmiss*StefBo*t1k*t1k*t1k*t1k
-				HEAT_NET(I) = DLW_AIR(I)+DSW_AIR(I)+HSB+HLB+ulw_airf        ! ejw 8/16/2006 based on ROMS
-				HEAT_SWV(I)  = DSW_AIR(I)
-				!EJA edit - output sensible and latent heat flux
-				HEAT_SENSIBLE(I) = HSB
-				HEAT_LATENT(I) = HLB
-				!g.l. 10/10/2017         HEAT_RLN(I)  = DLW_AIR(I)
-				HEAT_RLN(I)  = DLW_AIR(I)+ulw_airf	     
-			ELSE
-				USRCOARE(I) = USR !MDR 3-19-2013 for wind wave mix
-				!             t1k=t1(i,1)+273.16_sp !MDR 4-24-2013
-				t1k=t1(i,1)-DTER+273.16_sp !MDR 4-24-2013, include cool skin adjustment to surface temp
-				!MDR         ulw_airf=-emmiss*StefBo*t1k*t1k*t1k*t1k
-				!MDR         HEAT_NET(I) = DLW_AIR(I)+DSW_AIR(I)+HSB+HLB+ulw_airf        ! ejw 8/16/2006 based on ROMS
-				ulw_airf=-StefBo*t1k*t1k*t1k*t1k
-				HEAT_NET(I) = DSW_AIR(I)+HSB+HLB+emmiss*(DLW_AIR(I)+ulw_airf) !MDR, apply emmiss to NET long wave, as in COARE     
-				HEAT_SWV(I)  = DSW_AIR(I)
-				!EJA edit - output sensible and latent heat flux
-				HEAT_SENSIBLE(I) = HSB
-				HEAT_LATENT(I) = HLB
-				!g.l. 10/10/2017         HEAT_RLN(I)  = DLW_AIR(I)
-				HEAT_RLN(I)  = emmiss*(DLW_AIR(I)+ulw_airf)	     
-			END IF  
+        CALL BULKALGORITHM(WDS,T_AIR(I),RH_AIR(I),PA_AIR(I),T1(I,1),CLD_COV(I), &
+        DLW_AIR,HSB,HLB)
+        HEAT_NET(I) = DLW_AIR+DSW_AIR(I)*0.91+HSB+HLB
+        HEAT_SWV(I)  = DSW_AIR(I)*0.91
+        HEAT_SENSIBLE(I) = HSB
+        HEAT_LATENT(I) = HLB
+        HEAT_RLN(I)  = DLW_AIR    
 # endif
 ! YULONG WANG 20201027<==
 	 ELSE
-	   CALL FATAL_ERROR("The value of COARE_VERSION should be 'COARE26Z' or 'COARE40VN'")
+! YULONG WANG 20201027==>                                                              
+# if defined (DLW_CALCULATED)
+      CALL FATAL_ERROR("The value of COARE_VERSION should be 'BULKALGORITHM'")
+# else
+      CALL FATAL_ERROR("The value of COARE_VERSION should be 'COARE26Z' or 'COARE40VN'")
+# endif
+! YULONG WANG 20201027<==
 	 END IF  
        END DO
 
@@ -12997,42 +12968,23 @@ CONTAINS
 ! YULONG WANG 20201027==>
 # else
 		IF(TRIM(COARE_VERSION) == 'BULKALGORITHM')THEN
-			RAIN(I) = QPREC(I)*3600*1000  ! change unit to mm/hr  from m/s
-			ZI40 = fmiss
-			CP40 = 0.0_SP
-			SIGH = 0.0_SP
-			CALL BULKALGORITHM(WDS,ZUU,T_AIR(I),ZTT,RH_AIR(I),ZQQ,PA_AIR(I),T1(I,1),  &
-			DLW_AIR(I),DSW_AIR(I),TAU,HSB,HLB,CORR(I),ZI40(I),RAIN(I),CP40(I),SIGH(I),fmiss,USR,DTER) !MDR include USR, DTER
-
-			IF(.NOT. HEATING_FRESHWATER)THEN		
-				t1k=t1(i,1)+273.16_sp
-				ulw_airf=-emmiss*StefBo*t1k*t1k*t1k*t1k
-				HEAT_NET(I) = DLW_AIR(I)+DSW_AIR(I)+HSB+HLB+ulw_airf        ! ejw 8/16/2006 based on ROMS
-				HEAT_SWV(I)  = DSW_AIR(I)
-				!EJA edit - output sensible and latent heat flux
-				HEAT_SENSIBLE(I) = HSB
-				HEAT_LATENT(I) = HLB
-				!g.l. 10/10/2017         HEAT_RLN(I)  = DLW_AIR(I)
-				HEAT_RLN(I)  = DLW_AIR(I)+ulw_airf	     
-			ELSE
-				USRCOARE(I) = USR !MDR 3-19-2013 for wind wave mix
-				!             t1k=t1(i,1)+273.16_sp !MDR 4-24-2013
-				t1k=t1(i,1)-DTER+273.16_sp !MDR 4-24-2013, include cool skin adjustment to surface temp
-				!MDR         ulw_airf=-emmiss*StefBo*t1k*t1k*t1k*t1k
-				!MDR         HEAT_NET(I) = DLW_AIR(I)+DSW_AIR(I)+HSB+HLB+ulw_airf        ! ejw 8/16/2006 based on ROMS
-				ulw_airf=-StefBo*t1k*t1k*t1k*t1k
-				HEAT_NET(I) = DSW_AIR(I)+HSB+HLB+emmiss*(DLW_AIR(I)+ulw_airf) !MDR, apply emmiss to NET long wave, as in COARE     
-				HEAT_SWV(I)  = DSW_AIR(I)
-				!EJA edit - output sensible and latent heat flux
-				HEAT_SENSIBLE(I) = HSB
-				HEAT_LATENT(I) = HLB
-				!g.l. 10/10/2017         HEAT_RLN(I)  = DLW_AIR(I)
-				HEAT_RLN(I)  = emmiss*(DLW_AIR(I)+ulw_airf)	     
-			END IF  
+        CALL BULKALGORITHM(WDS,T_AIR(I),RH_AIR(I),PA_AIR(I),T1(I,1),CLD_COV(I), &
+        DLW_AIR,HSB,HLB)
+        HEAT_NET(I) = DLW_AIR+DSW_AIR(I)*0.91+HSB+HLB
+        HEAT_SWV(I)  = DSW_AIR(I)*0.91
+        HEAT_SENSIBLE(I) = HSB
+        HEAT_LATENT(I) = HLB
+        HEAT_RLN(I)  = DLW_AIR     
 # endif
 ! YULONG WANG 20201027<==
 	 ELSE
-	   CALL FATAL_ERROR("The value of COARE_VERSION should be 'COARE26Z' or 'COARE40VN'")
+! YULONG WANG 20201027==>                                                              
+# if defined (DLW_CALCULATED)
+      CALL FATAL_ERROR("The value of COARE_VERSION should be 'BULKALGORITHM'")
+# else
+      CALL FATAL_ERROR("The value of COARE_VERSION should be 'COARE26Z' or 'COARE40VN'")
+# endif
+! YULONG WANG 20201027<==
 	 END IF  
        END DO
 
