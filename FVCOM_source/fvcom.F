@@ -573,12 +573,12 @@ PROGRAM FVCOM
   !==============================================================================!
   ! SET DEFAULT VALUES AND READ NAME LISTS                                            
   !==============================================================================!
-  CALL NAMELIST
+  CALL NAMELIST ! see: NAMELIST.F
 
   !==============================================================================!
   !   SET MODEL CONTROL PARAMTERS BASED ON NAME LIST HERE                        !
   !==============================================================================!
-  CALL CNTRL_PRMTRS
+  CALL CNTRL_PRMTRS ! see: CNTRL_PRMTRS.F
 
   !==============================================================================!
   !   SET THE STARTUP TYPE TO BE USED!                                           !
@@ -588,7 +588,7 @@ PROGRAM FVCOM
   !==============================================================================!
   !   OPEN ALL FILES NEEDED BASED ON THE RUN PARAMETERS                          !
   !==============================================================================!
-  CALL OPEN_ALL
+  CALL OPEN_ALL ! see: OPEN_ALL.F
 
   !==============================================================================!
   !   SET MODEL TIME BASED ON THE NAMELIST TIME STRINGS OR RESTART FILE          !
@@ -657,7 +657,7 @@ PROGRAM FVCOM
   !==============================================================================!
   !  SETUP THE MODEL FORCING                                                     !
   !==============================================================================!
-  CALL SETUP_FORCING
+  CALL SETUP_FORCING ! AT MOD_FORCE.F
 
   !==============================================================================!
   !  SETUP OTHER TOOLS, MODELS AND DATA ASSIMILATION                             !
