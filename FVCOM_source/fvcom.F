@@ -760,7 +760,7 @@ PROGRAM FVCOM
   !==============================================================================!
   !  CALL ARCHIVE TO SETUP THE OUTPUT AND DUMP CONSTANT VALUES                   !
   !==============================================================================!
-  CALL BCOND_GCN(8,0)
+  CALL BCOND_GCN(8,0) ! boundary condition initiation
   
   CALL ARCHIVE
   ! ORDER MATTERS - ARCHIVE_NEST MUST GO AFTER ARCHIVE DURING SETUP!
