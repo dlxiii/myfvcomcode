@@ -24,6 +24,17 @@ MODULE MOD_STATION_TIMESERIES
   LOGICAL OUT_ENERGY_SPECTRUM
   LOGICAL OUT_WAVE_PARTITION
 # endif  
+! YULONG WANG 20201027==>
+# if defined (DLW_CALCULATED) && (HEATING_CALCULATED)
+  LOGICAL OUT_AIR_TEMP
+  LOGICAL OUT_AIR_RHUM
+  LOGICAL OUT_AIR_CLD
+  LOGICAL OUT_DSW
+  LOGICAL OUT_SQL
+  LOGICAL OUT_SQH
+  LOGICAL OUT_SQE
+# endif	 
+! YULONG WANG 20201027<==
   CHARACTER(LEN=80) OUT_INTERVAL
   
   NAMELIST /NML_STATION_TIMESERIES/        &
@@ -44,7 +55,18 @@ MODULE MOD_STATION_TIMESERIES
        & OUT_WAVE_DIRECTION,               &
        & OUT_ENERGY_SPECTRUM,              &
        & OUT_WAVE_PARTITION,               &
-# endif  
+# endif
+! YULONG WANG 20201027==>
+# if defined (DLW_CALCULATED) && (HEATING_CALCULATED)
+      & OUT_AIR_TEMP,                     &
+      & OUT_AIR_RHUM,                     &
+      & OUT_AIR_CLD,                      &
+      & OUT_DSW,                          &
+      & OUT_SQL,                          &
+      & OUT_SQH,                          &
+      & OUT_SQE,                          &
+# endif	 
+! YULONG WANG 20201027<==
        & OUT_INTERVAL
        
   INTEGER NSTA       
@@ -91,6 +113,18 @@ MODULE MOD_STATION_TIMESERIES
    integer,private :: vvwind_s_vid
    integer,private :: atmpres_s_vid
    integer,private :: name_s_vid
+
+! YULONG WANG 20201027==>
+# if defined (DLW_CALCULATED) && (HEATING_CALCULATED)
+   integer,private :: airtemp_s_vid
+   integer,private :: airrhum_s_vid
+   integer,private :: aircld_s_vid
+   integer,private :: dsw_s_vid
+   integer,private :: sql_s_vid
+   integer,private :: sqh_s_vid
+   integer,private :: sqe_s_vid
+# endif	 
+! YULONG WANG 20201027<==
    
 #  if defined (WAVE_CURRENT_INTERACTION) && !defined (WAVE_OFFLINE)
    integer,private :: hs_s_vid
@@ -144,6 +178,17 @@ MODULE MOD_STATION_TIMESERIES
    OUT_ENERGY_SPECTRUM       = .False.
    OUT_WAVE_PARTITION        = .False. 
 #  endif  
+! YULONG WANG 20201027==>
+# if defined (DLW_CALCULATED) && (HEATING_CALCULATED)
+   OUT_AIR_TEMP             = .False.
+   OUT_AIR_RHUM             = .False.
+   OUT_AIR_CLD              = .False.
+   OUT_DSW                  = .False.
+   OUT_SQL                  = .False.
+   OUT_SQH                  = .False.
+   OUT_SQE                  = .False.
+# endif	 
+! YULONG WANG 20201027<==
    OUT_INTERVAL              = "A length of time: 'seconds= ','days= ', or 'cycles= '"
    
    
@@ -206,7 +251,6 @@ MODULE MOD_STATION_TIMESERIES
 #  endif
    USE MOD_UTILS, ONLY : FOPEN
    USE MOD_OBCS, ONLY : GDAY1
-   
    IMPLICIT NONE
    CHARACTER(LEN=120) :: FNAME
    CHARACTER(LEN=3)   :: NAC
@@ -456,6 +500,75 @@ MODULE MOD_STATION_TIMESERIES
        deallocate(ftemp)
      END IF 
 #    endif
+
+! YULONG WANG 20201027==>
+# if defined (DLW_CALCULATED) && (HEATING_CALCULATED)
+     ! air temperature
+     IF(OUT_AIR_TEMP)THEN 
+       allocate(ftemp(m))
+       ftemp =T_AIR(1:m)
+       i1 = lbound(ftemp,1) ; i2 = ubound(ftemp,1)
+       call putvar(i1,i2,m,mgl,1,1,"n",ftemp,nc_ofid,airtemp_s_vid,myid&
+            &,nprocs,ipt, stck_cnt)
+       deallocate(ftemp)
+     END IF
+     ! relative humidity
+     IF(OUT_AIR_RHUM)THEN 
+      allocate(ftemp(m))
+      ftemp =RH_AIR(1:m)
+      i1 = lbound(ftemp,1) ; i2 = ubound(ftemp,1)
+      call putvar(i1,i2,m,mgl,1,1,"n",ftemp,nc_ofid,airrhum_s_vid,myid&
+           &,nprocs,ipt, stck_cnt)
+      deallocate(ftemp)
+    END IF 
+    ! cloud coverage
+    IF(OUT_AIR_CLD)THEN 
+      allocate(ftemp(m))
+      ftemp =CLD_COV(1:m)
+      i1 = lbound(ftemp,1) ; i2 = ubound(ftemp,1)
+      call putvar(i1,i2,m,mgl,1,1,"n",ftemp,nc_ofid,aircld_s_vid,myid&
+           &,nprocs,ipt, stck_cnt)
+      deallocate(ftemp)
+    END IF 
+    ! solar radiation
+    IF(OUT_DSW)THEN 
+      allocate(ftemp(m))
+      ftemp =DSW_AIR(1:m)
+      i1 = lbound(ftemp,1) ; i2 = ubound(ftemp,1)
+      call putvar(i1,i2,m,mgl,1,1,"n",ftemp,nc_ofid,dsw_s_vid,myid&
+           &,nprocs,ipt, stck_cnt)
+      deallocate(ftemp)
+    END IF 
+    ! HSENS_WATTS,HLAT_WATTS,LWRAD_WATTS
+    ! calculated longwave radiation from the sea
+    IF(OUT_SQL)THEN 
+      allocate(ftemp(m))
+      ftemp =LWRAD_WATTS(1:m)
+      i1 = lbound(ftemp,1) ; i2 = ubound(ftemp,1)
+      call putvar(i1,i2,m,mgl,1,1,"n",ftemp,nc_ofid,sql_s_vid,myid&
+           &,nprocs,ipt, stck_cnt)
+      deallocate(ftemp)
+    END IF 
+    ! calculated sensible heat flux
+    IF(OUT_SQH)THEN 
+      allocate(ftemp(m))
+      ftemp =HSENS_WATTS(1:m)
+      i1 = lbound(ftemp,1) ; i2 = ubound(ftemp,1)
+      call putvar(i1,i2,m,mgl,1,1,"n",ftemp,nc_ofid,sqh_s_vid,myid&
+           &,nprocs,ipt, stck_cnt)
+      deallocate(ftemp)
+    END IF 
+    ! calculated latent heat flux
+    IF(OUT_SQE)THEN 
+      allocate(ftemp(m))
+      ftemp =HLAT_WATTS(1:m)
+      i1 = lbound(ftemp,1) ; i2 = ubound(ftemp,1)
+      call putvar(i1,i2,m,mgl,1,1,"n",ftemp,nc_ofid,sqe_s_vid,myid&
+           &,nprocs,ipt, stck_cnt)
+      deallocate(ftemp)
+    END IF 
+# endif	 
+! YULONG WANG 20201027<==
 
 #    if defined (WAVE_CURRENT_INTERACTION) && !defined (WAVE_OFFLINE)
      IF(OUT_SIG_WAVE_HEIGHT)THEN
@@ -798,7 +911,68 @@ NETCDF_TIMESTRING = 'seconds after 00:00:00'
      ierr = nf90_put_att(nc_ofid,atmpres_s_vid,"standard_name","atmospheric pressure")
      ierr = nf90_put_att(nc_ofid,atmpres_s_vid,"type","data")
     end if
-#   endif    
+#   endif   
+
+! YULONG WANG 20201027==>
+# if defined (DLW_CALCULATED) && (HEATING_CALCULATED)
+   ! integer,private :: airtemp_s_vid
+   if(OUT_AIR_TEMP)then
+    ierr = nf90_def_var(nc_ofid,"air_temperature",nf90_float,dynm2ds,airtemp_s_vid)
+    ierr = nf90_put_att(nc_ofid,airtemp_s_vid,"long_name","Air temperature")
+    ierr = nf90_put_att(nc_ofid,airtemp_s_vid,"units","(Degrees_C)")
+    ierr = nf90_put_att(nc_ofid,airtemp_s_vid,"standard_name","air temperature")
+    ierr = nf90_put_att(nc_ofid,airtemp_s_vid,"type","data")
+   end if
+   ! integer,private :: airrhum_s_vid
+   if(OUT_AIR_RHUM)then
+    ierr = nf90_def_var(nc_ofid,"relative_humidity",nf90_float,dynm2ds,airrhum_s_vid)
+    ierr = nf90_put_att(nc_ofid,airrhum_s_vid,"long_name","Relative humidity")
+    ierr = nf90_put_att(nc_ofid,airrhum_s_vid,"units","(%)")
+    ierr = nf90_put_att(nc_ofid,airrhum_s_vid,"standard_name","relative humidity")
+    ierr = nf90_put_att(nc_ofid,airrhum_s_vid,"type","data")
+   end if
+   ! integer,private :: aircld_s_vid
+   if(OUT_AIR_CLD)then
+    ierr = nf90_def_var(nc_ofid,"cloud_coverage",nf90_float,dynm2ds,aircld_s_vid)
+    ierr = nf90_put_att(nc_ofid,aircld_s_vid,"long_name","Cloud coverage")
+    ierr = nf90_put_att(nc_ofid,aircld_s_vid,"units","(-)")
+    ierr = nf90_put_att(nc_ofid,aircld_s_vid,"standard_name","cloud coverage")
+    ierr = nf90_put_att(nc_ofid,aircld_s_vid,"type","data")
+   end if
+   ! integer,private :: dsw_s_vid
+   if(OUT_DSW)then
+    ierr = nf90_def_var(nc_ofid,"q_short",nf90_float,dynm2ds,dsw_s_vid)
+    ierr = nf90_put_att(nc_ofid,dsw_s_vid,"long_name","Solar radiation")
+    ierr = nf90_put_att(nc_ofid,dsw_s_vid,"units","(W/m2)")
+    ierr = nf90_put_att(nc_ofid,dsw_s_vid,"standard_name","solar radiation flux")
+    ierr = nf90_put_att(nc_ofid,dsw_s_vid,"type","data")
+   end if
+   ! integer,private :: sql_s_vid
+   if(OUT_SQL)then
+    ierr = nf90_def_var(nc_ofid,"q_long",nf90_float,dynm2ds,sql_s_vid)
+    ierr = nf90_put_att(nc_ofid,sql_s_vid,"long_name","Longwave radiation")
+    ierr = nf90_put_att(nc_ofid,sql_s_vid,"units","(W/m2)")
+    ierr = nf90_put_att(nc_ofid,sql_s_vid,"standard_name","longwage radiation flux")
+    ierr = nf90_put_att(nc_ofid,sql_s_vid,"type","data")
+   end if
+   ! integer,private :: sqh_s_vid
+   if(OUT_SQH)then
+    ierr = nf90_def_var(nc_ofid,"q_sensb",nf90_float,dynm2ds,sqh_s_vid)
+    ierr = nf90_put_att(nc_ofid,sqh_s_vid,"long_name","Sensible heat")
+    ierr = nf90_put_att(nc_ofid,sqh_s_vid,"units","(W/m2)")
+    ierr = nf90_put_att(nc_ofid,sqh_s_vid,"standard_name","Sensible heat flux")
+    ierr = nf90_put_att(nc_ofid,sqh_s_vid,"type","data")
+   end if
+   ! integer,private :: sqe_s_vid
+   if(OUT_SQE)then
+    ierr = nf90_def_var(nc_ofid,"q_latnt",nf90_float,dynm2ds,sqe_s_vid)
+    ierr = nf90_put_att(nc_ofid,sqe_s_vid,"long_name","Latent heat")
+    ierr = nf90_put_att(nc_ofid,sqe_s_vid,"units","(W/m2)")
+    ierr = nf90_put_att(nc_ofid,sqe_s_vid,"standard_name","latent heat flux")
+    ierr = nf90_put_att(nc_ofid,sqe_s_vid,"type","data")
+   end if
+# endif	 
+! YULONG WANG 20201027<==
 
 #   if defined (WAVE_CURRENT_INTERACTION) && !defined (WAVE_OFFLINE)
     if(OUT_SIG_WAVE_HEIGHT)then
