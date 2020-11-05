@@ -33,6 +33,7 @@ MODULE MOD_STATION_TIMESERIES
   LOGICAL OUT_SQL
   LOGICAL OUT_SQH
   LOGICAL OUT_SQE
+  LOGICAL OUT_NET
 # endif	 
 ! YULONG WANG 20201027<==
   CHARACTER(LEN=80) OUT_INTERVAL
@@ -65,6 +66,7 @@ MODULE MOD_STATION_TIMESERIES
       & OUT_SQL,                          &
       & OUT_SQH,                          &
       & OUT_SQE,                          &
+      & OUT_NET,                          &
 # endif	 
 ! YULONG WANG 20201027<==
        & OUT_INTERVAL
@@ -123,6 +125,7 @@ MODULE MOD_STATION_TIMESERIES
    integer,private :: sql_s_vid
    integer,private :: sqh_s_vid
    integer,private :: sqe_s_vid
+   integer,private :: net_s_vid
 # endif	 
 ! YULONG WANG 20201027<==
    
@@ -187,6 +190,7 @@ MODULE MOD_STATION_TIMESERIES
    OUT_SQL                  = .False.
    OUT_SQH                  = .False.
    OUT_SQE                  = .False.
+   OUT_NET                  = .False.
 # endif	 
 ! YULONG WANG 20201027<==
    OUT_INTERVAL              = "A length of time: 'seconds= ','days= ', or 'cycles= '"
@@ -530,16 +534,24 @@ MODULE MOD_STATION_TIMESERIES
            &,nprocs,ipt, stck_cnt)
       deallocate(ftemp)
     END IF 
-    ! solar radiation
+    ! SWRAD_WATTS,WTSURF_WATTS
     IF(OUT_DSW)THEN 
       allocate(ftemp(m))
-      ftemp =DSW_AIR(1:m)
+      ftemp =SWRAD_WATTS(1:m)
       i1 = lbound(ftemp,1) ; i2 = ubound(ftemp,1)
       call putvar(i1,i2,m,mgl,1,1,"n",ftemp,nc_ofid,dsw_s_vid,myid&
            &,nprocs,ipt, stck_cnt)
       deallocate(ftemp)
     END IF 
-    ! HSENS_WATTS,HLAT_WATTS,LWRAD_WATTS
+    IF(OUT_NET)THEN 
+      allocate(ftemp(m))
+      ftemp =WTSURF_WATTS(1:m)
+      i1 = lbound(ftemp,1) ; i2 = ubound(ftemp,1)
+      call putvar(i1,i2,m,mgl,1,1,"n",ftemp,nc_ofid,net_s_vid,myid&
+           &,nprocs,ipt, stck_cnt)
+      deallocate(ftemp)
+    END IF 
+    ! LWRAD_WATTS,HSENS_WATTS,HLAT_WATTS
     ! calculated longwave radiation from the sea
     IF(OUT_SQL)THEN 
       allocate(ftemp(m))
@@ -942,9 +954,9 @@ NETCDF_TIMESTRING = 'seconds after 00:00:00'
    ! integer,private :: dsw_s_vid
    if(OUT_DSW)then
     ierr = nf90_def_var(nc_ofid,"q_short",nf90_float,dynm2ds,dsw_s_vid)
-    ierr = nf90_put_att(nc_ofid,dsw_s_vid,"long_name","Solar radiation")
+    ierr = nf90_put_att(nc_ofid,dsw_s_vid,"long_name","Shortwave radiation")
     ierr = nf90_put_att(nc_ofid,dsw_s_vid,"units","(W/m2)")
-    ierr = nf90_put_att(nc_ofid,dsw_s_vid,"standard_name","solar radiation flux")
+    ierr = nf90_put_att(nc_ofid,dsw_s_vid,"standard_name","shortwavev radiation flux")
     ierr = nf90_put_att(nc_ofid,dsw_s_vid,"type","data")
    end if
    ! integer,private :: sql_s_vid
@@ -970,6 +982,14 @@ NETCDF_TIMESTRING = 'seconds after 00:00:00'
     ierr = nf90_put_att(nc_ofid,sqe_s_vid,"units","(W/m2)")
     ierr = nf90_put_att(nc_ofid,sqe_s_vid,"standard_name","latent heat flux")
     ierr = nf90_put_att(nc_ofid,sqe_s_vid,"type","data")
+   end if
+   ! integer,private :: net_s_vid
+   if(OUT_NET)then
+    ierr = nf90_def_var(nc_ofid,"q_net",nf90_float,dynm2ds,net_s_vid)
+    ierr = nf90_put_att(nc_ofid,net_s_vid,"long_name","Net heat")
+    ierr = nf90_put_att(nc_ofid,net_s_vid,"units","(W/m2)")
+    ierr = nf90_put_att(nc_ofid,net_s_vid,"standard_name","sea surface ent heat flux")
+    ierr = nf90_put_att(nc_ofid,net_s_vid,"type","data")
    end if
 # endif	 
 ! YULONG WANG 20201027<==
