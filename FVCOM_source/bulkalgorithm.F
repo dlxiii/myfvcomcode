@@ -85,6 +85,10 @@
         END IF
     END IF
 
+    sql = sql * -1.
+    sqh = sqh * -1.
+    sqe = sqh * -1.
+
   end subroutine bulkalgorithm
 # endif
 # endif
