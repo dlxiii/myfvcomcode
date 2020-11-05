@@ -60,7 +60,7 @@
     dt=TC-tair
     TaK=tair+273.15
     es=6.1078*10**(7.5*tair/TaK)
-    ea=es*humidity
+    ea=es*humidity/100.
     rhoa=1.293*(273.15/TaK)*(pair/1013.25)*(1.0-0.378*(ea/pair))
     qs=0.622*es/(pair-0.378*es)
     qa=0.622*ea/(pair-0.378*ea)
