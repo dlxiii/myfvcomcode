@@ -87,7 +87,6 @@ MODULE MOD_NCDIO
   USE MOD_INPUT
 
 
-  USE mod_dye , only: dye_on
   
 
 
@@ -595,11 +594,6 @@ CONTAINS
        
        
 
-    IF(DYE_ON)THEN
-      NCF2 => DYE_FILE_OBJECT()
-      NCF => ADD(NCF,NCF2)
-!!$      NCF => ADD(NCF,DYE_FILE_OBJECT())
-    ENDIF
 
 
        
@@ -910,11 +904,6 @@ CONTAINS
 
 
 
-    IF(DYE_ON)THEN
-      NCF_TMP => DYE_FILE_OBJECT()
-      NC_AVG_DATA => ADD(NC_AVG_DATA,NCF_TMP)
-!!$      NC_AVG_DATA => ADD(NC_AVG_DATA,DYE_FILE_OBJECT())
-    ENDIF
 
     
 
@@ -1268,10 +1257,6 @@ CONTAINS
 
 
 
-    IF(DYE_ON)THEN
-      NC_RST2 => DYE_FILE_OBJECT()
-      NC_RST => ADD(NC_RST,NC_RST2)
-    ENDIF
 
 
 
@@ -4738,68 +4723,6 @@ CONTAINS
 
 
 !=============================================================  
-  FUNCTION DYE_FILE_OBJECT() RESULT(NCF)
-    USE MOD_DYE
-
-    IMPLICIT NONE
-
-    INTEGER :: status, I
-    LOGICAL, SAVE :: IOPROC_ALLOCATED = .FALSE.
-    TYPE(NCFILE), POINTER :: NCF
-    TYPE(NCVAR),  POINTER :: VAR
-    TYPE(NCATT),  POINTER :: ATT
-
-
-    IF(DBG_SET(DBG_SBR)) WRITE(IPT,*) "START DYE_FILE_OBJECT"
-
-    ! IO PROC MUST ALLOCATE SPACE FOR THE ARRAYS 
-    ! THESE ARRAYS MUST HAVE THE ATTRIBUTE SAVE AND FOR CLARITY
-    ! SHOULD HAVE THE SAME NAME AS THOSE USED ON THE OTHER PROCESSORS!
-    IF(IOPROC .AND. .NOT. IOPROC_ALLOCATED) THEN
-
-       IOPROC_ALLOCATED = .true.
-
-       allocate(DYE(MGL,KB),stat=status)
-       IF (STATUS /=0 ) CALL FATAL_ERROR("COULD NOT ALLOCATE MEMORY ON IO PROC FOR OUTPUT DATA:EL")
-       DYE = 0.0_SP
-
-    END IF
-
-    ! ALLOCATE THE NEW FILE OBJECT
-    NCF => NEW_FILE()
-
-
-    ! Dye
-    VAR  => NC_MAKE_AVAR(name='DYE',&
-         & values=DYE, DIM1= DIM_node, DIM2= DIM_siglay, DIM3=DIM_time)
-
-    ATT  => NC_MAKE_ATT(name='long_name',values='Water Surface Elevation') 
-    VAR  => ADD(VAR,ATT)
-
-    ATT  => NC_MAKE_ATT(name='units',values='meters') 
-    VAR  => ADD(VAR,ATT)
-
-    ATT  => NC_MAKE_ATT(name='positive',values='up') 
-    VAR  => ADD(VAR,ATT)
-
-    ATT  => NC_MAKE_ATT(name='standard_name',values='sea_surface_height_above_geoid') 
-    VAR  => ADD(VAR,ATT)
-
-    ATT  => NC_MAKE_ATT(name='grid',values='SigmaLayer_Mesh') 
-    VAR  => ADD(VAR,ATT)
-
-    ATT  => NC_MAKE_ATT(name='coordinates',values=CoordVar) 
-    VAR  => ADD(VAR,ATT)
-
-    ATT  => NC_MAKE_ATT(name='type',values='data') 
-    VAR  => ADD(VAR,ATT)
-
-    NCF  => ADD(NCF,VAR)
-
-
-    IF(DBG_SET(DBG_SBR)) WRITE(IPT,*) "END DYE_FILE_OBJECT"
-
-  END FUNCTION DYE_FILE_OBJECT
 
 !=============================================================  
 

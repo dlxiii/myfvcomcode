@@ -50,7 +50,6 @@ SUBROUTINE INTERNAL_STEP
   USE MOD_ICE
   USE MOD_ICE2D
   USE MOD_NORTHPOLE
-  USE MOD_DYE
 
 
 
@@ -437,33 +436,6 @@ SUBROUTINE INTERNAL_STEP
   END IF                      
 
   !==============================================================================!
-  
-  !==============================================================================!
-  !    UPDATE DYE IN NON-BAROTROPIC CASE                                         !
-  !==============================================================================!
-  !     IF(DYE_ON.AND.IINT.GE.IINT_SPE_DYE_B) THEN     !                          !                          !
-  IF(DYE_ON) THEN     !                          !                          !
-     CALL ADV_DYE                                   !Advection                 !
-     
-     
-     IF(PAR)CALL NODE_MATCH(1,NBN,BN_MLT,BN_LOC,BNC,MT,KB,MYID,NPROCS,DYEF)
-     
-     
-     !     IF(TS_FCT) CALL AVER_DYE                      !Conservation Correction   !
-     
-     CALL VDIF_DYE(DYEF)                            !Vertical Diffusion        !
-     
-     !check
-     !!     DYE = DYEF                                     !Update to new time level  !
-     !!     IF(IINT.GE.IINT_SPE_DYE_B) CALL ARCHIVE
-     !check    
-     IF(PAR)CALL AEXCHANGE(NC,MYID,NPROCS,DYEF) !Interprocessor Exchange   !
-     CALL BCOND_DYE                                 !Boundary Conditions       !
-     DYE = DYEF                                     !Update to new time level  !
-     
-     !!     IF(MSR) WRITE(IPT,*) 'CALL Dye_on--iint=',iint,IINT_SPE_DYE_B
-  END IF                                         !                          !
-  !==================================================================================!
   !endif defined (DYE)
 
 !==================================================================================!
@@ -540,7 +512,6 @@ SUBROUTINE INTERNAL_STEP
      CALL AEXCHANGE(EC,MYID,NPROCS,RHO,T,S)
      CALL AEXCHANGE(NC,MYID,NPROCS,S1,T1,RHO1)
      
-     CALL AEXCHANGE(NC,MYID,NPROCS,DYE)
      
      CALL AEXCHANGE(EC,MYID,NPROCS,VISCOFM)
      CALL AEXCHANGE(NC,MYID,NPROCS,VISCOFH)

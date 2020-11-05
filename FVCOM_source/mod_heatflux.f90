@@ -124,7 +124,7 @@ MODULE MOD_HEATFLUX
 ! YULONG WANG 20201027==>																														   
    COARE_VERSION          = "'BULKALGORITHM'"
 ! YULONG WANG 20201027<==
-   ZUU                    = 2  ! Unit = m                                 
+   ZUU                    = 20  ! Unit = m                                 
    ZTT                    = 2  ! Unit = m                                 
    ZQQ                    = 2  ! Unit = m                                 
    AIR_TEMPERATURE        = 0.0_SP                     
