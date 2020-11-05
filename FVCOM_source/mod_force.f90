@@ -48,6 +48,7 @@ MODULE MOD_FORCE
   USE MOD_SPHERICAL
   USE MOD_PAR
   USE MOD_INPUT
+  USE MOD_HEATFLUX
 
   IMPLICIT NONE
 
@@ -166,6 +167,13 @@ MODULE MOD_FORCE
   !  TYPE(NCVAR), POINTER :: HEAT_LTNT_N, HEAT_LTNT_P ! LATENT
   !  TYPE(NCVAR), POINTER :: HEAT_SNS_N, HEAT_SNS_P   ! SENSIBLE
   TYPE(NCVAR), POINTER :: HEAT_NET_N, HEAT_NET_P   ! NET HEAT FLUX
+  TYPE(NCVAR), POINTER :: T_AIR_N, T_AIR_P   
+  TYPE(NCVAR), POINTER :: RH_AIR_N, RH_AIR_P   
+  TYPE(NCVAR), POINTER :: PA_AIR_N, PA_AIR_P  
+! YULONG WANG 20201027==>
+  TYPE(NCVAR), POINTER :: CLD_COV_N, CLD_COV_P
+! YULONG WANG 20201027<==
+  TYPE(NCVAR), POINTER :: DSW_AIR_N, DSW_AIR_P   
   ! =================================================================
   ! SURFACE WIND STRESS FILE DATA 
   INTEGER :: WINDS_FORCING_TYPE
@@ -279,10 +287,10 @@ MODULE MOD_FORCE
 
   PUBLIC :: SETUP_FORCING
   PUBLIC :: UPDATE_GROUNDWATER
-  PUBLIC :: UPDATE_HEAT
   PUBLIC :: UPDATE_WIND
   PUBLIC :: UPDATE_WAVE
 
+  PUBLIC :: UPDATE_HEAT_CALCULATED
 
 
 
@@ -313,8 +321,11 @@ CONTAINS
 
     NULLIFY(GWATER_FILE)
 
-    NULLIFY(HEAT_FILE,HEAT_INTP_N, HEAT_INTP_C, HEAT_SWV_P,&
-         & HEAT_SWV_N)
+! YULONG WANG 20201027==>	
+    NULLIFY(HEAT_FILE,HEAT_INTP_N, HEAT_INTP_C, T_AIR_P, T_AIR_N,  &
+         &  RH_AIR_P, RH_AIR_N, PA_AIR_P, PA_AIR_N, CLD_COV_P,     &
+         &  CLD_COV_N, DSW_AIR_P, DSW_AIR_N)
+! YULONG WANG 20201027<==
 
     NULLIFY(WINDS_FILE,WINDS_INTP_N,WINDS_INTP_C, WINDS_STRX_N,&
          & WINDS_STRX_P, WINDS_STRY_N, WINDS_STRY_P)
@@ -338,10 +349,10 @@ CONTAINS
     CALL OBC_TEMPERATURE
     CALL OBC_SALINITY
     CALL RIVER_DISCHARGE
-    CALL SURFACE_HEATING
     CALL SURFACE_WINDSTRESS
     CALL SURFACE_PRECIPITATION
     CALL SURFACE_AIRPRESSURE
+    CALL SURFACE_HEATING_CALCULATED
 
 
 
@@ -2787,7 +2798,10 @@ CONTAINS
   END SUBROUTINE SET_FILE_INTERP_BILINEAR
   !================================================================
   !================================================================
-  SUBROUTINE SURFACE_HEATING
+  !================================================================
+  !================================================================
+  SUBROUTINE SURFACE_HEATING_CALCULATED
+    USE MOD_HEATFLUX
     IMPLICIT NONE
     ! SOME NC POINTERS
     TYPE(NCATT), POINTER :: ATT, ATT_DATE
@@ -2795,43 +2809,107 @@ CONTAINS
     TYPE(NCVAR), POINTER :: VAR
     LOGICAL :: FOUND
 
-    REAL(SP), POINTER :: STORAGE_ARR(:,:), storage_vec(:)
-    CHARACTER(len=60) :: swrstrng, nhfstrng
+    REAL(SP), POINTER :: STORAGE_ARR(:,:), STORAGE_VEC(:)
+! YULONG WANG 20201027==>																														   
+   CHARACTER(LEN=60) :: t_airstrng, rh_airstrng, pa_airstrng, cld_covstrng, dsw_airstrng
+! YULONG WANG 20201027<==	
     TYPE(TIME) :: TIMETEST
 
     INTEGER :: LATS, LONS, I, Ntimes
 
     INTEGER :: STATUS
+    REAL(SP) :: TEMP
 
-    IF(DBG_SET(DBG_SBR)) write(IPT,*) "START SURFACE_HEATING"
+    CHARACTER(LEN=80)  :: ISTR
+    ISTR = "./"//TRIM(INPUT_DIR)//"/"//trim(casename)
+  
+    IF(DBG_SET(DBG_SBR)) write(IPT,*) "START SURFACE_HEATING_CALCULATED"
 
     NULLIFY(ATT,DIM,VAR,STORAGE_ARR,STORAGE_VEC)
 
-    IF (.NOT. HEATING_ON ) THEN
+    IF (.NOT. HEATING_CALCULATE_ON ) THEN
        IF(DBG_SET(DBG_LOG)) write(IPT,*) "! SURFACE HEAT FORCING IS OFF!"
-       ALLOCATE(HEAT_FORCING_COMMENTS(1))
-       HEAT_FORCING_COMMENTS(1) = "SURFACE HEAT FORCING IS OFF"
+       ALLOCATE(HEAT_CALCULATE_COMMENTS(1))
+       HEAT_CALCULATE_COMMENTS(1) = "SURFACE HEAT FORCING IS OFF"
        RETURN
     END IF
 
+!------------------------------------------------------------------------------|
+!--------------READ IN LATITUDE------------------------------------------------!
+
+   ALLOCATE(CORRG(0:MGL))  ; CORRG = 0.0_SP
+   CALL FOPEN(CORIOLISUNIT, TRIM(ISTR)//'_cor.dat',"cfr")
+   REWIND(CORIOLISUNIT)
+   READ(CORIOLISUNIT,*)
+   DO I=1,MGL
+     READ(CORIOLISUNIT,*) TEMP,TEMP,CORRG(I)
+   END DO
+   CLOSE(CORIOLISUNIT)
+
+!--------------TRANSFORM TO LOCAL DOMAINS IF PARALLEL--------------------------!
+   ALLOCATE(CORR(0:MT)) ; CORR = 0.0_SP
+   IF(SERIAL) CORR = CORRG
+
+   IF(PAR)THEN
+     DO I=1,M
+       CORR(I) = CORRG(NGID(I))
+     END DO
+     DO I=1,NHN
+       CORR(I+M) = CORRG(HN_LST(I))
+     END DO
+   END IF
+   DEALLOCATE(CORRG)
+
+! YULONG WANG 20201027==>																														   
+! YULONG WANG 20201027<==	
+!----------------------------REPORT--------------------------------------------!
+   IF(MSR)WRITE(IPT,*)'!'
+   IF(MSR)WRITE(IPT,*)'!            SETTING UP PRESCRIBED BOUNDARY CONDITIONS  '
+   IF(MSR)WRITE(IPT,*)'!'
+
+!===========================================================================================|
+!   Input Meteorological Boundary Conditions for Calculating Heat Flux                      |
+!===========================================================================================|
+!    bulk air temperature at height 2m:   degree(C)    "t_air"                              |
+!    relative humidity at height 2m:      (%)          "rh_air"                             |
+!    surface pressure:                    mb           "pa_air"                             |
+!    downward longwave radiation:         w/m^2        "dlw_air"    if DLW CALCULATED is OFF|
+!    cloud cover:                         (0-1)        "cld_cov"    if DLW CALCULATED is ON |
+!    downward shortwave radiation:        w/m^2        "dsw_air"                            |
+!===========================================================================================|
 
     ! DETERMINE HOW TO LOAD THE DATA
-    SELECT CASE(HEATING_KIND)
+    SELECT CASE(HEATING_CALCULATE_KIND)
     CASE (CNSTNT)
-
-       write(swrstrng,'(f8.4)') HEATING_RADIATION
-       write(nhfstrng,'(f8.4)') HEATING_NETFLUX
+       write(t_airstrng,'(f8.4)')   AIR_TEMPERATURE
+       write(rh_airstrng,'(f8.4)')  RELATIVE_HUMIDITY
+       write(pa_airstrng,'(f8.4)')  SURFACE_PRESSURE
+! YULONG WANG 20201027==>																														   
+       write(cld_covstrng,'(f8.4)') CLOUD_COVERAGE
+! YULONG WANG 20201027<==	
+       write(dsw_airstrng,'(f8.4)') SHORTWAVE_RADIATION
 
        IF(DBG_SET(DBG_LOG)) THEN
           WRITE(IPT,*)"! SETTING UP CONSTANT HEAT FORCING: "
-          WRITE(IPT,*)"      Radiation: "//trim(swrstrng)
-          WRITE(IPT,*)"  Net Heat Flux: "//trim(nhfstrng)
+          WRITE(IPT,*)"         Bulk Air Temperature: "//trim(t_airstrng)
+          WRITE(IPT,*)"            Relative Hunidity: "//trim(rh_airstrng)
+          WRITE(IPT,*)"             Surface Pressure: "//trim(pa_airstrng)
+! YULONG WANG 20201027==>																														   
+          WRITE(IPT,*)"          Cloud Coverage Rate: "//trim(cld_covstrng)
+! YULONG WANG 20201027<==	
+          WRITE(IPT,*)" Downward shortwave Radiation: "//trim(dsw_airstrng)
        END IF
 
-       ALLOCATE(HEAT_FORCING_COMMENTS(3))
-       HEAT_FORCING_COMMENTS(1) = "Using constant heating from run file:"
-       HEAT_FORCING_COMMENTS(2) = "Radiation:"//trim(swrstrng)
-       HEAT_FORCING_COMMENTS(3) = "Net Heat Flux:"//trim(nhfstrng)
+       ALLOCATE(HEAT_CALCULATE_COMMENTS(6))
+       HEAT_CALCULATE_COMMENTS(1) = "Using constant heating from run file:"
+       HEAT_CALCULATE_COMMENTS(2) = "Bulk Air Temperature:"//trim(t_airstrng)
+       HEAT_CALCULATE_COMMENTS(3) = "Relative Humidity:"//trim(rh_airstrng)
+       HEAT_CALCULATE_COMMENTS(4) = "Surface Pressure:"//trim(pa_airstrng)
+! YULONG WANG 20201027==>																														   
+       HEAT_CALCULATE_COMMENTS(5) = "Cloud Coverage Rate:"//trim(cld_covstrng)
+! YULONG WANG 20201027<==	
+       HEAT_CALCULATE_COMMENTS(6) = "Downward Shortwave Radiation:"//trim(dsw_airstrng)
+
        RETURN
 
     CASE(STTC)
@@ -2844,17 +2922,17 @@ CONTAINS
 
     CASE(PRDC)
 
-       HEAT_FILE => FIND_FILE(FILEHEAD,trim(HEATING_FILE),FOUND)
+       HEAT_FILE => FIND_FILE(FILEHEAD,trim(HEATING_CALCULATE_FILE),FOUND)
        IF(.not. FOUND) CALL FATAL_ERROR &
             & ("COULD NOT FIND SURFACE HEATING BOUNDARY CONDINTION FILE OBJECT",&
-            & "FILE NAME: "//TRIM(HEATING_FILE))
+            & "FILE NAME: "//TRIM(HEATING_CALCULATE_FILE))
 
        ! DETERMINE GRID TYPE BASED ON SOURCE ATTRIBUTE
        ATT => FIND_ATT(HEAT_FILE,"source",FOUND)
        IF(.not. FOUND) ATT => FIND_ATT(HEAT_FILE,"Source",FOUND)
        IF(.not. FOUND) CALL FATAL_ERROR &
             & ("IN SURFACE HEATING BOUNDARY CONDITION FILE OBJECT",&
-            & "FILE NAME: "//TRIM(HEATING_FILE),&
+            & "FILE NAME: "//TRIM(HEATING_CALCULATE_FILE),&
             &"COULD NOT FIND GLOBAL ATTRIBURE: 'source'")
 
        IF (ATT%CHR(1)(1:len_trim(wrf2fvcom_source)) ==&
@@ -2882,7 +2960,7 @@ CONTAINS
 
        ALLOCATE(HEAT_FORCING_COMMENTS(4))
        HEAT_FORCING_COMMENTS(1) = "FVCOM periodic surface heat forcing:"
-       HEAT_FORCING_COMMENTS(2) = "FILE NAME:"//TRIM(HEATING_FILE)
+       HEAT_FORCING_COMMENTS(2) = "FILE NAME:"//TRIM(HEATING_CALCULATE_FILE)
 
        HEAT_FORCING_COMMENTS(3) = "SOURCE:"//TRIM(ATT%CHR(1))
 
@@ -2899,7 +2977,7 @@ CONTAINS
        DIM => FIND_UNLIMITED(HEAT_FILE,FOUND)
        IF(.not. FOUND) CALL FATAL_ERROR &
             & ("IN SURFACE HEATING BOUNDARY CONDITION FILE OBJECT",&
-            & "FILE NAME: "//TRIM(HEATING_FILE),&
+            & "FILE NAME: "//TRIM(HEATING_CALCULATE_FILE),&
             &"COULD NOT FIND THE UNLIMITED DIMENSION")
 
        NTIMES = DIM%DIM
@@ -2928,17 +3006,17 @@ CONTAINS
 
     CASE(VRBL)
 
-       HEAT_FILE => FIND_FILE(FILEHEAD,trim(HEATING_FILE),FOUND)
+       HEAT_FILE => FIND_FILE(FILEHEAD,trim(HEATING_CALCULATE_FILE),FOUND)
        IF(.not. FOUND) CALL FATAL_ERROR &
             & ("COULD NOT FIND SURFACE HEATING BOUNDARY CONDINTION FILE OBJECT",&
-            & "FILE NAME: "//TRIM(HEATING_FILE))
+            & "FILE NAME: "//TRIM(HEATING_CALCULATE_FILE))
 
        ! DETERMINE GRID TYPE BASED ON SOURCE ATTRIBUTE
        ATT => FIND_ATT(HEAT_FILE,"source",FOUND)
        IF(.not. FOUND) ATT => FIND_ATT(HEAT_FILE,"Source",FOUND)
        IF(.not. FOUND) CALL FATAL_ERROR &
             & ("IN SURFACE HEATING BOUNDARY CONDITION FILE OBJECT",&
-            & "FILE NAME: "//TRIM(HEATING_FILE),&
+            & "FILE NAME: "//TRIM(HEATING_CALCULATE_FILE),&
             &"COULD NOT FIND GLOBAL ATTRIBURE: 'source'")
 
        IF (ATT%CHR(1)(1:len_trim(wrf2fvcom_source)) ==&
@@ -2967,7 +3045,7 @@ CONTAINS
        ALLOCATE(HEAT_FORCING_COMMENTS(4))
        HEAT_FORCING_COMMENTS(1) = "FVCOM variable surface heat forcing file:"
  
-       HEAT_FORCING_COMMENTS(2) = "FILE NAME:"//TRIM(HEATING_FILE)
+       HEAT_FORCING_COMMENTS(2) = "FILE NAME:"//TRIM(HEATING_CALCULATE_FILE)
        HEAT_FORCING_COMMENTS(3) = "SOURCE:"//TRIM(ATT%CHR(1))
 
        ATT_DATE => FIND_ATT(HEAT_FILE,"START_DATE",FOUND)
@@ -2981,7 +3059,7 @@ CONTAINS
        DIM => FIND_UNLIMITED(HEAT_FILE,FOUND)
        IF(.not. FOUND) CALL FATAL_ERROR &
             & ("IN SURFACE HEATING BOUNDARY CONDITION FILE OBJECT",&
-            & "FILE NAME: "//TRIM(HEATING_FILE),&
+            & "FILE NAME: "//TRIM(HEATING_CALCULATE_FILE),&
             &"COULD NOT FIND UNLIMITED DIMENSION")
 
        NTIMES = DIM%DIM
@@ -2990,13 +3068,13 @@ CONTAINS
        TIMETEST = get_file_time(HEAT_FILE,1)
        IF(TIMETEST > STARTTIME) CALL FATAL_ERROR &
             & ("IN SURFACE HEATING BOUNDARY CONDITION FILE OBJECT",&
-            & "FILE NAME: "//TRIM(HEATING_FILE),&
+            & "FILE NAME: "//TRIM(HEATING_CALCULATE_FILE),&
             &"THE MODEL RUN STARTS BEFORE THE FORCING TIME SERIES")
 
        TIMETEST = get_file_time(HEAT_FILE,ntimes)
        IF(TIMETEST < ENDTIME) CALL FATAL_ERROR &
             & ("IN SURFACE HEATING BOUNDARY CONDITION FILE OBJECT",&
-            & "FILE NAME: "//TRIM(HEATING_FILE),&
+            & "FILE NAME: "//TRIM(HEATING_CALCULATE_FILE),&
             &"THE MODEL RUN ENDS AFTER THE FORCING TIME SERIES")
 
     CASE DEFAULT
@@ -3018,7 +3096,7 @@ CONTAINS
        DIM => FIND_DIM(HEAT_FILE,'south_north',FOUND)  
        IF(.not. FOUND) CALL FATAL_ERROR &
             & ("IN SURFACE HEATING BOUNDARY CONDITION FILE OBJECT",&
-            & "FILE NAME: "//TRIM(HEATING_FILE),&
+            & "FILE NAME: "//TRIM(HEATING_CALCULATE_FILE),&
             & "COULD NOT FIND DIMENSION 'south_north'")
 
        LATS = DIM%DIM
@@ -3026,7 +3104,7 @@ CONTAINS
        DIM => FIND_DIM(HEAT_FILE,'west_east',FOUND)
        IF(.not. FOUND) CALL FATAL_ERROR &
             & ("IN SURFACE HEATING BOUNDARY CONDITION FILE OBJECT",&
-            & "FILE NAME: "//TRIM(HEATING_FILE),&
+            & "FILE NAME: "//TRIM(HEATING_CALCULATE_FILE),&
             & "COULD NOT FIND DIMENSION 'west_east'")
        LONS = DIM%DIM
 
@@ -3035,75 +3113,184 @@ CONTAINS
 
        ! SETUP THE ACTUAL VARIABLES USED TO LOAD DATA!
 
-       ! SHORT WAVE RADIATION DATA
+!
+       ! BULK AIR TEMPERATURE DATA
+       VAR => FIND_VAR(HEAT_FILE,"air_temperature",FOUND)
+       IF(.not. FOUND) VAR => FIND_VAR(HEAT_FILE,"air_temperature",FOUND)
+       IF(.not. FOUND) CALL FATAL_ERROR &
+            & ("IN SURFACE HEATING BOUNDARY CONDITION FILE OBJECT",&
+            & "FILE NAME: "//TRIM(HEATING_CALCULATE_FILE),&
+            & "COULD NOT FIND VARIABLE 'air_temperature'")
+
+       ! MAKE SPACE FOR THE DATA FROM THE FILE
+       ALLOCATE(STORAGE_ARR(lons,lats), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
+       T_AIR_N => reference_var(var)
+       CALL NC_CONNECT_PVAR(T_AIR_N,STORAGE_ARR)
+       NULLIFY(STORAGE_ARR)
+
+       ! MAKE SPACE FOR THE INTERPOLATED DATA
+       ALLOCATE(STORAGE_VEC(0:MT), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
+       CALL NC_CONNECT_PVAR(T_AIR_N,STORAGE_VEC)
+       NULLIFY(STORAGE_VEC)
+
+
+       ! MAKE SPACE FOR THE DATA FROM THE FILE
+       ALLOCATE(STORAGE_ARR(lons,lats), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
+       T_AIR_P => reference_var(var)
+       CALL NC_CONNECT_PVAR(T_AIR_P,STORAGE_ARR)
+       NULLIFY(STORAGE_ARR)
+
+       ! MAKE SPACE FOR THE INTERPOLATED DATA
+       ALLOCATE(STORAGE_VEC(0:MT), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
+       CALL NC_CONNECT_PVAR(T_AIR_P,STORAGE_VEC)
+       NULLIFY(STORAGE_VEC)
+!
+       ! RELATIVE HUMIDITY
+       VAR => FIND_VAR(HEAT_FILE,"relative_humidity",FOUND)
+       IF(.not. FOUND) VAR => FIND_VAR(HEAT_FILE,"relative_humidity",FOUND)
+       IF(.not. FOUND) CALL FATAL_ERROR &
+            & ("IN SURFACE HEATING BOUNDARY CONDITION FILE OBJECT",&
+            & "FILE NAME: "//TRIM(HEATING_CALCULATE_FILE),&
+            & "COULD NOT FIND VARIABLE 'relative_humidity'")
+
+       ! MAKE SPACE FOR THE DATA FROM THE FILE
+       ALLOCATE(STORAGE_ARR(lons,lats), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
+       RH_AIR_N => reference_var(var)
+       CALL NC_CONNECT_PVAR(RH_AIR_N,STORAGE_ARR)
+       NULLIFY(STORAGE_ARR)
+
+       ! MAKE SPACE FOR THE INTERPOLATED DATA
+       ALLOCATE(STORAGE_VEC(0:MT), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
+       CALL NC_CONNECT_PVAR(RH_AIR_N,STORAGE_VEC)
+       NULLIFY(STORAGE_VEC)
+
+
+       ! MAKE SPACE FOR THE DATA FROM THE FILE
+       ALLOCATE(STORAGE_ARR(lons,lats), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
+       RH_AIR_P => reference_var(var)
+       CALL NC_CONNECT_PVAR(RH_AIR_P,STORAGE_ARR)
+       NULLIFY(STORAGE_ARR)
+
+       ! MAKE SPACE FOR THE INTERPOLATED DATA
+       ALLOCATE(STORAGE_VEC(0:MT), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
+       CALL NC_CONNECT_PVAR(RH_AIR_P,STORAGE_VEC)
+       NULLIFY(STORAGE_VEC)
+!       
+       ! SURFACE PRESSURE
+       VAR => FIND_VAR(HEAT_FILE,"air_pressure",FOUND)
+       IF(.not. FOUND) VAR => FIND_VAR(HEAT_FILE,"air_pressure",FOUND)
+       IF(.not. FOUND) CALL FATAL_ERROR &
+            & ("IN SURFACE HEATING BOUNDARY CONDITION FILE OBJECT",&
+            & "FILE NAME: "//TRIM(HEATING_CALCULATE_FILE),&
+            & "COULD NOT FIND VARIABLE 'air_pressure'")
+
+       ! MAKE SPACE FOR THE DATA FROM THE FILE
+       ALLOCATE(STORAGE_ARR(lons,lats), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
+       PA_AIR_N => reference_var(var)
+       CALL NC_CONNECT_PVAR(PA_AIR_N,STORAGE_ARR)
+       NULLIFY(STORAGE_ARR)
+
+       ! MAKE SPACE FOR THE INTERPOLATED DATA
+       ALLOCATE(STORAGE_VEC(0:MT), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
+       CALL NC_CONNECT_PVAR(PA_AIR_N,STORAGE_VEC)
+       NULLIFY(STORAGE_VEC)
+
+
+       ! MAKE SPACE FOR THE DATA FROM THE FILE
+       ALLOCATE(STORAGE_ARR(lons,lats), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
+       PA_AIR_P => reference_var(var)
+       CALL NC_CONNECT_PVAR(PA_AIR_P,STORAGE_ARR)
+       NULLIFY(STORAGE_ARR)
+
+       ! MAKE SPACE FOR THE INTERPOLATED DATA
+       ALLOCATE(STORAGE_VEC(0:MT), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
+       CALL NC_CONNECT_PVAR(PA_AIR_P,STORAGE_VEC)
+       NULLIFY(STORAGE_VEC)
+!    
+! YULONG WANG 20201027==>	
+       ! CLOUD COVERAGE RATE
+       VAR => FIND_VAR(HEAT_FILE,"cloud_cover",FOUND)
+       IF(.not. FOUND) VAR => FIND_VAR(HEAT_FILE,"cloud cover",FOUND)
+       IF(.not. FOUND) CALL FATAL_ERROR &
+            & ("IN SURFACE HEATING BOUNDARY CONDITION FILE OBJECT",&
+            & "FILE NAME: "//TRIM(HEATING_CALCULATE_FILE),&
+            & "COULD NOT FIND VARIABLE 'cloud_cover'")
+
+       ! MAKE SPACE FOR THE DATA FROM THE FILE
+       ALLOCATE(STORAGE_ARR(lons,lats), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
+       CLD_COV_N => reference_var(var)
+       CALL NC_CONNECT_PVAR(CLD_COV_N,STORAGE_ARR)
+       NULLIFY(STORAGE_ARR)
+
+       ! MAKE SPACE FOR THE INTERPOLATED DATA
+       ALLOCATE(STORAGE_VEC(0:MT), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
+       CALL NC_CONNECT_PVAR(CLD_COV_N,STORAGE_VEC)
+       NULLIFY(STORAGE_VEC)
+
+
+       ! MAKE SPACE FOR THE DATA FROM THE FILE
+       ALLOCATE(STORAGE_ARR(lons,lats), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
+       CLD_COV_P => reference_var(var)
+       CALL NC_CONNECT_PVAR(CLD_COV_P,STORAGE_ARR)
+       NULLIFY(STORAGE_ARR)
+
+       ! MAKE SPACE FOR THE INTERPOLATED DATA
+       ALLOCATE(STORAGE_VEC(0:MT), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
+       CALL NC_CONNECT_PVAR(CLD_COV_P,STORAGE_VEC)
+       NULLIFY(STORAGE_VEC)
+!  
+! YULONG WANG 20201027<==	
+       ! DOWNWARD SHORTWAVE RADIATION
        VAR => FIND_VAR(HEAT_FILE,"short_wave",FOUND)
        IF(.not. FOUND) VAR => FIND_VAR(HEAT_FILE,"Shortwave",FOUND)
        IF(.not. FOUND) CALL FATAL_ERROR &
             & ("IN SURFACE HEATING BOUNDARY CONDITION FILE OBJECT",&
-            & "FILE NAME: "//TRIM(HEATING_FILE),&
+            & "FILE NAME: "//TRIM(HEATING_CALCULATE_FILE),&
             & "COULD NOT FIND VARIABLE 'short_wave'")
 
        ! MAKE SPACE FOR THE DATA FROM THE FILE
        ALLOCATE(STORAGE_ARR(lons,lats), stat = status)
        IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
-       HEAT_SWV_N => reference_var(var)
-       CALL NC_CONNECT_PVAR(HEAT_SWV_N,STORAGE_ARR)
+       DSW_AIR_N => reference_var(var)
+       CALL NC_CONNECT_PVAR(DSW_AIR_N,STORAGE_ARR)
        NULLIFY(STORAGE_ARR)
 
        ! MAKE SPACE FOR THE INTERPOLATED DATA
        ALLOCATE(STORAGE_VEC(0:MT), stat = status)
        IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
-       CALL NC_CONNECT_PVAR(HEAT_SWV_N,STORAGE_VEC)
+       CALL NC_CONNECT_PVAR(DSW_AIR_N,STORAGE_VEC)
        NULLIFY(STORAGE_VEC)
 
 
        ! MAKE SPACE FOR THE DATA FROM THE FILE
        ALLOCATE(STORAGE_ARR(lons,lats), stat = status)
        IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
-       HEAT_SWV_P => reference_var(var)
-       CALL NC_CONNECT_PVAR(HEAT_SWV_P,STORAGE_ARR)
+       DSW_AIR_P => reference_var(var)
+       CALL NC_CONNECT_PVAR(DSW_AIR_P,STORAGE_ARR)
        NULLIFY(STORAGE_ARR)
 
        ! MAKE SPACE FOR THE INTERPOLATED DATA
        ALLOCATE(STORAGE_VEC(0:MT), stat = status)
        IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
-       CALL NC_CONNECT_PVAR(HEAT_SWV_P,STORAGE_VEC)
+       CALL NC_CONNECT_PVAR(DSW_AIR_P,STORAGE_VEC)
        NULLIFY(STORAGE_VEC)
-
-       ! NET HEAT FLUX DATA
-       VAR => FIND_VAR(HEAT_FILE,"net_heat_flux",FOUND)
-       IF(.not. FOUND) VAR => FIND_VAR(HEAT_FILE,"Net_Heat",FOUND)
-       IF(.not. FOUND) CALL FATAL_ERROR &
-            & ("IN SURFACE HEATING BOUNDARY CONDITION FILE OBJECT",&
-            & "FILE NAME: "//TRIM(HEATING_FILE),&
-            & "COULD NOT FIND VARIABLE 'net_heat_flux'")
-
-       ! MAKE SPACE FOR THE DATA FROM THE FILE
-       ALLOCATE(STORAGE_ARR(lons,lats), stat = status)
-       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
-       HEAT_NET_N => reference_var(var)
-       CALL NC_CONNECT_PVAR(HEAT_NET_N,STORAGE_ARR)
-       NULLIFY(STORAGE_ARR)
-
-       ! MAKE SPACE FOR THE INTERPOLATED DATA
-       ALLOCATE(STORAGE_VEC(0:MT), stat = status)
-       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
-       CALL NC_CONNECT_PVAR(HEAT_NET_N,STORAGE_VEC)
-       NULLIFY(STORAGE_VEC)
-
-
-       ! MAKE SPACE FOR THE DATA FROM THE FILE
-       ALLOCATE(STORAGE_ARR(lons,lats), stat = status)
-       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
-       HEAT_NET_P => reference_var(var)
-       CALL NC_CONNECT_PVAR(HEAT_NET_P,STORAGE_ARR)
-       NULLIFY(STORAGE_ARR)
-
-       ! MAKE SPACE FOR THE INTERPOLATED DATA
-       ALLOCATE(STORAGE_VEC(0:MT), stat = status)
-       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
-       CALL NC_CONNECT_PVAR(HEAT_NET_P,STORAGE_VEC)
-       NULLIFY(STORAGE_VEC)
+!       
 
        !==================================================================
     CASE(HEAT_IS_FVCOMGRID)
@@ -3116,7 +3303,7 @@ CONTAINS
        DIM => FIND_DIM(HEAT_FILE,'node',FOUND)  
        IF(.not. FOUND) CALL FATAL_ERROR &
             & ("IN SURFACE HEATING BOUNDARY CONDITION FILE OBJECT",&
-            & "FILE NAME: "//TRIM(HEATING_FILE),&
+            & "FILE NAME: "//TRIM(HEATING_CALCULATE_FILE),&
             & "COULD NOT FIND DIMENSION 'node'")
 
        if (mgl /= dim%dim) CALL FATAL_ERROR&
@@ -3126,7 +3313,7 @@ CONTAINS
        DIM => FIND_DIM(HEAT_FILE,'nele',FOUND)
        IF(.not. FOUND) CALL FATAL_ERROR &
             & ("IN SURFACE HEATING BOUNDARY CONDITION FILE OBJECT",&
-            & "FILE NAME: "//TRIM(HEATING_FILE),&
+            & "FILE NAME: "//TRIM(HEATING_CALCULATE_FILE),&
             & "COULD NOT FIND DIMENSION 'nele'")
 
        if (ngl /= dim%dim) CALL FATAL_ERROR&
@@ -3134,50 +3321,119 @@ CONTAINS
 
        ! SETUP THE ACTUAL VARIABLES USED TO LOAD DATA!
 
-       ! SHORT WAVE RADIATION DATA
+!
+       ! BULK AIR TEMPERATURE DATA
+       VAR => FIND_VAR(HEAT_FILE,"air_temperature",FOUND)
+       IF(.not. FOUND) CALL FATAL_ERROR &
+            & ("IN SURFACE HEATING BOUNDARY CONDITION FILE OBJECT",&
+            & "FILE NAME: "//TRIM(HEATING_CALCULATE_FILE),&
+            & "COULD NOT FIND VARIABLE 'air_temperature'")
+
+       ! MAKE SPACE FOR THE DATA FROM THE FILE
+       T_AIR_N => reference_var(var)
+       ALLOCATE(STORAGE_VEC(0:MT), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
+       CALL NC_CONNECT_PVAR(T_AIR_N,STORAGE_VEC)
+       NULLIFY(STORAGE_VEC)
+
+
+       ! MAKE SPACE FOR THE DATA FROM THE FILE
+       T_AIR_P => reference_var(var)
+       ALLOCATE(STORAGE_VEC(0:MT), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
+       CALL NC_CONNECT_PVAR(T_AIR_P,STORAGE_VEC)
+       NULLIFY(STORAGE_VEC)
+!
+       ! RELATIVE HUMIDITY DATA
+       VAR => FIND_VAR(HEAT_FILE,"relative_humidity",FOUND)
+       IF(.not. FOUND) CALL FATAL_ERROR &
+            & ("IN SURFACE HEATING BOUNDARY CONDITION FILE OBJECT",&
+            & "FILE NAME: "//TRIM(HEATING_CALCULATE_FILE),&
+            & "COULD NOT FIND VARIABLE 'relative_humidity'")
+
+       ! MAKE SPACE FOR THE DATA FROM THE FILE
+       RH_AIR_N => reference_var(var)
+       ALLOCATE(STORAGE_VEC(0:MT), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
+       CALL NC_CONNECT_PVAR(RH_AIR_N,STORAGE_VEC)
+       NULLIFY(STORAGE_VEC)
+
+
+       ! MAKE SPACE FOR THE DATA FROM THE FILE
+       RH_AIR_P => reference_var(var)
+       ALLOCATE(STORAGE_VEC(0:MT), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
+       CALL NC_CONNECT_PVAR(RH_AIR_P,STORAGE_VEC)
+       NULLIFY(STORAGE_VEC)
+!
+       ! SURFACE PRESSURE
+       VAR => FIND_VAR(HEAT_FILE,"air_pressure",FOUND)
+       IF(.not. FOUND) CALL FATAL_ERROR &
+            & ("IN SURFACE HEATING BOUNDARY CONDITION FILE OBJECT",&
+            & "FILE NAME: "//TRIM(HEATING_CALCULATE_FILE),&
+            & "COULD NOT FIND VARIABLE 'air_pressure'")
+
+       ! MAKE SPACE FOR THE DATA FROM THE FILE
+       PA_AIR_N => reference_var(var)
+       ALLOCATE(STORAGE_VEC(0:MT), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
+       CALL NC_CONNECT_PVAR(PA_AIR_N,STORAGE_VEC)
+       NULLIFY(STORAGE_VEC)
+
+
+       ! MAKE SPACE FOR THE DATA FROM THE FILE
+       PA_AIR_P => reference_var(var)
+       ALLOCATE(STORAGE_VEC(0:MT), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
+       CALL NC_CONNECT_PVAR(PA_AIR_P,STORAGE_VEC)
+       NULLIFY(STORAGE_VEC)
+!
+! YULONG WANG 20201027==>	
+       ! CLOUD COVERAGE RATE
+       VAR => FIND_VAR(HEAT_FILE,"cloud_cover",FOUND)
+       IF(.not. FOUND) CALL FATAL_ERROR &
+            & ("IN SURFACE HEATING BOUNDARY CONDITION FILE OBJECT",&
+            & "FILE NAME: "//TRIM(HEATING_CALCULATE_FILE),&
+            & "COULD NOT FIND VARIABLE 'cloud_cover'")
+
+       ! MAKE SPACE FOR THE DATA FROM THE FILE
+       CLD_COV_N => reference_var(var)
+       ALLOCATE(STORAGE_VEC(0:MT), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
+       CALL NC_CONNECT_PVAR(CLD_COV_N,STORAGE_VEC)
+       NULLIFY(STORAGE_VEC)
+
+
+       ! MAKE SPACE FOR THE DATA FROM THE FILE
+       CLD_COV_P => reference_var(var)
+       ALLOCATE(STORAGE_VEC(0:MT), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
+       CALL NC_CONNECT_PVAR(CLD_COV_P,STORAGE_VEC)
+       NULLIFY(STORAGE_VEC)
+!
+! YULONG WANG 20201027<==
+       ! DOWNWARD SHORTWAVE RADIATION
        VAR => FIND_VAR(HEAT_FILE,"short_wave",FOUND)
        IF(.not. FOUND) CALL FATAL_ERROR &
             & ("IN SURFACE HEATING BOUNDARY CONDITION FILE OBJECT",&
-            & "FILE NAME: "//TRIM(HEATING_FILE),&
+            & "FILE NAME: "//TRIM(HEATING_CALCULATE_FILE),&
             & "COULD NOT FIND VARIABLE 'short_wave'")
 
        ! MAKE SPACE FOR THE DATA FROM THE FILE
-       HEAT_SWV_N => reference_var(var)
+       DSW_AIR_N => reference_var(var)
        ALLOCATE(STORAGE_VEC(0:MT), stat = status)
        IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
-       CALL NC_CONNECT_PVAR(HEAT_SWV_N,STORAGE_VEC)
+       CALL NC_CONNECT_PVAR(DSW_AIR_N,STORAGE_VEC)
        NULLIFY(STORAGE_VEC)
 
 
        ! MAKE SPACE FOR THE DATA FROM THE FILE
-       HEAT_SWV_P => reference_var(var)
+       DSW_AIR_P => reference_var(var)
        ALLOCATE(STORAGE_VEC(0:MT), stat = status)
        IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
-       CALL NC_CONNECT_PVAR(HEAT_SWV_P,STORAGE_VEC)
+       CALL NC_CONNECT_PVAR(DSW_AIR_P,STORAGE_VEC)
        NULLIFY(STORAGE_VEC)
-
-       ! NET HEAT FLUX DATA
-       VAR => FIND_VAR(HEAT_FILE,"net_heat_flux",FOUND)
-       IF(.not. FOUND) CALL FATAL_ERROR &
-            & ("IN SURFACE HEATING BOUNDARY CONDITION FILE OBJECT",&
-            & "FILE NAME: "//TRIM(HEATING_FILE),&
-            & "COULD NOT FIND VARIABLE 'net_heat_flux'")
-
-       ! MAKE SPACE FOR THE DATA FROM THE FILE
-       HEAT_NET_N => reference_var(var)
-       ALLOCATE(STORAGE_VEC(0:MT), stat = status)
-       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
-       CALL NC_CONNECT_PVAR(HEAT_NET_N,STORAGE_VEC)
-       NULLIFY(STORAGE_VEC)
-
-
-       ! MAKE SPACE FOR THE DATA FROM THE FILE
-       HEAT_NET_P => reference_var(var)
-       ALLOCATE(STORAGE_VEC(0:MT), stat = status)
-       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
-       CALL NC_CONNECT_PVAR(HEAT_NET_P,STORAGE_VEC)
-       NULLIFY(STORAGE_VEC)
-
+!
        !==================================================================
     CASE DEFAULT
        !==================================================================
@@ -3190,15 +3446,16 @@ CONTAINS
     ! Need initialization. Otherwise, random values are asigned
     ! and cause a hanging problem of MPI job in UPDATE_VAR_BRACKET 
     ! This problem reported with Intel15.0.3. 
-    heat_net_n%curr_stkcnt=0
-    heat_net_p%curr_stkcnt=0
-    heat_swv_n%curr_stkcnt=0
-    heat_swv_p%curr_stkcnt=0
+    t_air_n%curr_stkcnt   = 0;t_air_p%curr_stkcnt   = 0
+    rh_air_n%curr_stkcnt  = 0;rh_air_p%curr_stkcnt  = 0
+    pa_air_n%curr_stkcnt  = 0;pa_air_p%curr_stkcnt  = 0
+! YULONG WANG 20201027==>	
+    cld_cov_n%curr_stkcnt = 0;cld_cov_p%curr_stkcnt = 0
+! YULONG WANG 20201027<==	
+    dsw_air_n%curr_stkcnt = 0;dsw_air_p%curr_stkcnt = 0
 
-    IF(DBG_SET(DBG_SBR)) write(IPT,*) "END SURFACE_HEATING"
-  END SUBROUTINE SURFACE_HEATING
-  !================================================================
-  !================================================================
+    IF(DBG_SET(DBG_SBR)) write(IPT,*) "END SURFACE_HEATING_CALCULATED"
+  END SUBROUTINE SURFACE_HEATING_CALCULATED
 !========================================================================
 !========================================================================
   !================================================================
@@ -6334,14 +6591,24 @@ CONTAINS
 
   END SUBROUTINE UPDATE_GROUNDWATER
   !==============================================================================|
-  SUBROUTINE UPDATE_HEAT(NOW,HEAT_SWV,HEAT_NET)
+  !==============================================================================|
+  !==============================================================================|
+  SUBROUTINE UPDATE_HEAT_CALCULATED(NOW,HEAT_SWV,HEAT_NET,HEAT_SENSIBLE,HEAT_LATENT,HEAT_RLN)
     IMPLICIT NONE
-    TYPE(TIME), INTENT(IN) :: NOW
-    TYPE(TIME)             :: HTIME
-    REAL(SP), ALLOCATABLE :: HEAT_SWV(:), HEAT_NET(:)
-    TYPE(NCFTIME), POINTER :: FTM
-    INTEGER :: STATUS
-    REAL(SP), POINTER :: VNP(:), VPP(:)
+    TYPE(TIME), INTENT(IN)    :: NOW
+    TYPE(TIME)                :: HTIME
+    REAL(SP), ALLOCATABLE     :: HEAT_SWV(:), HEAT_NET(:)
+    REAL(SP), ALLOCATABLE     :: HEAT_SENSIBLE(:), HEAT_LATENT(:), HEAT_RLN(:)
+! YULONG WANG 20201027==>
+    REAL(SP)                  :: DLW_AIR
+! YULONG WANG 20201027<==
+    TYPE(NCFTIME), POINTER    :: FTM
+    INTEGER                   :: STATUS,I,J
+    REAL(SP), POINTER         :: VNP(:), VPP(:)
+    REAL(SP)                  :: WDS
+    REAL(SP)                  :: HSB,HLB,TAU,USR,DTER
+    REAL(SP), DIMENSION(0:NT) :: WDSN
+    REAL(SP)                  :: t1k,ulw_airf          ! ejw 8/16/2006
 
     IF(.NOT. ALLOCATED(HEAT_SWV)) CALL FATAL_ERROR &
          &("THE HEAT SHORTWAVE VARIABLE PASSED TO UPDATE IS NOT ALLOCATED")
@@ -6349,15 +6616,56 @@ CONTAINS
     IF(.NOT. ALLOCATED(HEAT_NET)) CALL FATAL_ERROR &
          &("THE NET HEAT VARIABLE PASSED TO UPDATE IS NOT ALLOCATED")
 
+    IF(.NOT. ALLOCATED(HEAT_SENSIBLE)) CALL FATAL_ERROR &
+         &("THE SENSIBLE HEAT VARIABLE PASSED TO UPDATE IS NOT ALLOCATED")
+
+    IF(.NOT. ALLOCATED(HEAT_LATENT)) CALL FATAL_ERROR &
+         &("THE LATENT HEAT VARIABLE PASSED TO UPDATE IS NOT ALLOCATED")
+
+    IF(.NOT. ALLOCATED(HEAT_RLN)) CALL FATAL_ERROR &
+         &("THE LONGWAVE HEAT VARIABLE PASSED TO UPDATE IS NOT ALLOCATED")
+
+    IF(WIND_TYPE /= 'speed')CALL FATAL_ERROR("WIND_TYPE must be 'speed' for heat flux calculating")
+       
 !===================================================
-    SELECT CASE(HEATING_KIND)
+    SELECT CASE(HEATING_CALCULATE_KIND)
 !===================================================
     CASE (CNSTNT)
-       
-       HEAT_SWV(1:MT) = HEATING_RADIATION
-       HEAT_NET(1:MT) = HEATING_NETFLUX
+    
+	T_AIR(1:MT)   = AIR_TEMPERATURE
+	RH_AIR(1:MT)  = RELATIVE_HUMIDITY
+	PA_AIR(1:MT)  = SURFACE_PRESSURE
+! YULONG WANG 20201027==>
+	CLD_COV(1:MT) = CLOUD_COVERAGE
+! YULONG WANG 20201027<==
+	DSW_AIR(1:MT) = SHORTWAVE_RADIATION
 
-       RETURN
+	WDSN(1:NT) = SQRT(UUWIND(1:NT)*UUWIND(1:NT)+VVWIND(1:NT)*VVWIND(1:NT))
+
+	DO I=1,MT  
+		WDS = 0.0_SP
+		DO J=1,NTVE(I)
+			WDS = WDS + WDSN(NBVE(I,J))	
+		END DO
+		WDS = WDS/FLOAT(NTVE(I))
+! YULONG WANG 20201027==>
+		IF(TRIM(COARE_VERSION) == 'BULKALGORITHM')THEN
+        CALL BULKALGORITHM(WDS,T_AIR(I),RH_AIR(I),PA_AIR(I),T1(I,1),CLD_COV(I), &
+        DLW_AIR,HSB,HLB)
+        HEAT_NET(I) = DLW_AIR+DSW_AIR(I)*0.91+HSB+HLB
+        HEAT_SWV(I)  = DSW_AIR(I)*0.91
+        HEAT_SENSIBLE(I) = HSB
+        HEAT_LATENT(I) = HLB
+        HEAT_RLN(I)  = DLW_AIR
+! YULONG WANG 20201027<==
+		ELSE
+! YULONG WANG 20201027==>                                                              
+      CALL FATAL_ERROR("The value of COARE_VERSION should be 'BULKALGORITHM'")
+! YULONG WANG 20201027<==
+		END IF  
+	END DO
+
+	RETURN
 
     CASE(STTC)
 
@@ -6394,61 +6702,186 @@ CONTAINS
 
        FTM => HEAT_FILE%FTIME
 
-       ! SHORT WAVE RADIATION
-       CALL UPDATE_VAR_BRACKET(HEAT_FILE,HEAT_SWV_P,HEAT_SWV_N,HTIME,STATUS,HEAT_INTP_N)
+!
+       ! BULK AIR TEMPERATURE
+       CALL UPDATE_VAR_BRACKET(HEAT_FILE,T_AIR_P,T_AIR_N,HTIME,STATUS,HEAT_INTP_N)
        IF (STATUS /= 0) THEN
           CALL FATAL_ERROR("COULD NOT UPATE HEAT_FILE TIME BRACKET: BOUNDS EXCEEDED?")
        end if
 
-       CALL NC_POINT_VAR(HEAT_SWV_N,VNP)
-       CALL NC_POINT_VAR(HEAT_SWV_P,VPP)        
+       CALL NC_POINT_VAR(T_AIR_N,VNP)
+       CALL NC_POINT_VAR(T_AIR_P,VPP)        
 
-       HEAT_SWV = FTM%NEXT_WGHT * VNP + FTM%PREV_WGHT * VPP
-
-       ! NET HEAT FLUX
-       CALL UPDATE_VAR_BRACKET(HEAT_FILE,HEAT_NET_P,HEAT_NET_N,HTIME,STATUS,HEAT_INTP_N)
+       T_AIR = FTM%NEXT_WGHT * VNP + FTM%PREV_WGHT * VPP
+!
+       ! RELATIVE HUMIDITY
+       CALL UPDATE_VAR_BRACKET(HEAT_FILE,RH_AIR_P,RH_AIR_N,HTIME,STATUS,HEAT_INTP_N)
        IF (STATUS /= 0) THEN
           CALL FATAL_ERROR("COULD NOT UPATE HEAT_FILE TIME BRACKET: BOUNDS EXCEEDED?")
        end if
 
-       CALL NC_POINT_VAR(HEAT_NET_N,VNP)
-       CALL NC_POINT_VAR(HEAT_NET_P,VPP)   
-       HEAT_NET = FTM%NEXT_WGHT * VNP + FTM%PREV_WGHT * VPP
+       CALL NC_POINT_VAR(RH_AIR_N,VNP)
+       CALL NC_POINT_VAR(RH_AIR_P,VPP)        
+
+       RH_AIR = FTM%NEXT_WGHT * VNP + FTM%PREV_WGHT * VPP
+!
+       ! SURFACE PRESSURE
+       CALL UPDATE_VAR_BRACKET(HEAT_FILE,PA_AIR_P,PA_AIR_N,HTIME,STATUS,HEAT_INTP_N)
+       IF (STATUS /= 0) THEN
+          CALL FATAL_ERROR("COULD NOT UPATE HEAT_FILE TIME BRACKET: BOUNDS EXCEEDED?")
+       end if
+
+       CALL NC_POINT_VAR(PA_AIR_N,VNP)
+       CALL NC_POINT_VAR(PA_AIR_P,VPP)        
+
+       PA_AIR = FTM%NEXT_WGHT * VNP + FTM%PREV_WGHT * VPP
+!
+! YULONG WANG 20201027==>
+       ! CLOUD COVERAGE RATE
+       CALL UPDATE_VAR_BRACKET(HEAT_FILE,CLD_COV_P,CLD_COV_N,HTIME,STATUS,HEAT_INTP_N)
+       IF (STATUS /= 0) THEN
+          CALL FATAL_ERROR("COULD NOT UPATE HEAT_FILE TIME BRACKET: BOUNDS EXCEEDED?")
+       end if
+
+       CALL NC_POINT_VAR(CLD_COV_N,VNP)
+       CALL NC_POINT_VAR(CLD_COV_P,VPP)        
+
+       CLD_COV = FTM%NEXT_WGHT * VNP + FTM%PREV_WGHT * VPP
+!
+! YULONG WANG 20201027<==
+       ! DOWNWARD SHORTWAVE RADIATION
+       CALL UPDATE_VAR_BRACKET(HEAT_FILE,DSW_AIR_P,DSW_AIR_N,HTIME,STATUS,HEAT_INTP_N)
+       IF (STATUS /= 0) THEN
+          CALL FATAL_ERROR("COULD NOT UPATE HEAT_FILE TIME BRACKET: BOUNDS EXCEEDED?")
+       end if
+
+       CALL NC_POINT_VAR(DSW_AIR_N,VNP)
+       CALL NC_POINT_VAR(DSW_AIR_P,VPP)        
+
+       DSW_AIR = FTM%NEXT_WGHT * VNP + FTM%PREV_WGHT * VPP
+!
+
+       WDSN(1:NT) = SQRT(UUWIND(1:NT)*UUWIND(1:NT)+VVWIND(1:NT)*VVWIND(1:NT))
+
+       DO I=1,M  
+         WDS = 0.0_SP
+         DO J=1,NTVE(I)
+           WDS = WDS + WDSN(NBVE(I,J))
+         END DO
+         WDS = WDS/FLOAT(NTVE(I))
+
+! YULONG WANG 20201027==>
+		IF(TRIM(COARE_VERSION) == 'BULKALGORITHM')THEN
+        CALL BULKALGORITHM(WDS,T_AIR(I),RH_AIR(I),PA_AIR(I),T1(I,1),CLD_COV(I), &
+        DLW_AIR,HSB,HLB)
+        HEAT_NET(I) = DLW_AIR+DSW_AIR(I)*0.91+HSB+HLB
+        HEAT_SWV(I)  = DSW_AIR(I)*0.91
+        HEAT_SENSIBLE(I) = HSB
+        HEAT_LATENT(I) = HLB
+        HEAT_RLN(I)  = DLW_AIR    
+! YULONG WANG 20201027<==
+	 ELSE
+! YULONG WANG 20201027==>                                                              
+      CALL FATAL_ERROR("The value of COARE_VERSION should be 'BULKALGORITHM'")
+! YULONG WANG 20201027<==
+	 END IF  
+       END DO
 
     CASE(HEAT_IS_FVCOMGRID)
 
        FTM => HEAT_FILE%FTIME
 
-       ! SHORT WAVE RADIATION
-       CALL UPDATE_VAR_BRACKET(HEAT_FILE,HEAT_SWV_P,HEAT_SWV_N,HTIME,STATUS)
+!
+       ! BULK AIR TEMPERATURE
+       CALL UPDATE_VAR_BRACKET(HEAT_FILE,T_AIR_P,T_AIR_N,HTIME,STATUS)
        IF (STATUS /= 0) THEN
           CALL FATAL_ERROR("COULD NOT UPATE HEAT_FILE TIME BRACKET: BOUNDS EXCEEDED?")
        end if
 
-       CALL NC_POINT_VAR(HEAT_SWV_N,VNP)
-       CALL NC_POINT_VAR(HEAT_SWV_P,VPP)        
+       CALL NC_POINT_VAR(T_AIR_N,VNP)
+       CALL NC_POINT_VAR(T_AIR_P,VPP)        
 
-       HEAT_SWV = FTM%NEXT_WGHT * VNP + FTM%PREV_WGHT * VPP
-
-       ! NET HEAT FLUX
-       CALL UPDATE_VAR_BRACKET(HEAT_FILE,HEAT_NET_P,HEAT_NET_N,HTIME,STATUS)
+       T_AIR = FTM%NEXT_WGHT * VNP + FTM%PREV_WGHT * VPP
+!
+       ! RELATIVE HUMIDITY
+       CALL UPDATE_VAR_BRACKET(HEAT_FILE,RH_AIR_P,RH_AIR_N,HTIME,STATUS)
        IF (STATUS /= 0) THEN
           CALL FATAL_ERROR("COULD NOT UPATE HEAT_FILE TIME BRACKET: BOUNDS EXCEEDED?")
        end if
 
-       CALL NC_POINT_VAR(HEAT_NET_N,VNP)
-       CALL NC_POINT_VAR(HEAT_NET_P,VPP)   
-       HEAT_NET = FTM%NEXT_WGHT * VNP + FTM%PREV_WGHT * VPP
+       CALL NC_POINT_VAR(RH_AIR_N,VNP)
+       CALL NC_POINT_VAR(RH_AIR_P,VPP)        
 
+       RH_AIR = FTM%NEXT_WGHT * VNP + FTM%PREV_WGHT * VPP
+!
+       ! SURFACE PRESSURE
+       CALL UPDATE_VAR_BRACKET(HEAT_FILE,PA_AIR_P,PA_AIR_N,HTIME,STATUS)
+       IF (STATUS /= 0) THEN
+          CALL FATAL_ERROR("COULD NOT UPATE HEAT_FILE TIME BRACKET: BOUNDS EXCEEDED?")
+       end if
+
+       CALL NC_POINT_VAR(PA_AIR_N,VNP)
+       CALL NC_POINT_VAR(PA_AIR_P,VPP)        
+
+       PA_AIR = FTM%NEXT_WGHT * VNP + FTM%PREV_WGHT * VPP
+!
+! YULONG WANG 20201027==>
+       ! CLOUD COVERAGE RATE
+       CALL UPDATE_VAR_BRACKET(HEAT_FILE,CLD_COV_P,CLD_COV_N,HTIME,STATUS)
+       IF (STATUS /= 0) THEN
+          CALL FATAL_ERROR("COULD NOT UPATE HEAT_FILE TIME BRACKET: BOUNDS EXCEEDED?")
+       end if
+
+       CALL NC_POINT_VAR(CLD_COV_N,VNP)
+       CALL NC_POINT_VAR(CLD_COV_P,VPP)        
+
+       CLD_COV = FTM%NEXT_WGHT * VNP + FTM%PREV_WGHT * VPP
+!
+! YULONG WANG 20201027<==
+       ! DOWNWARD SHORTWAVE RADIATION
+       CALL UPDATE_VAR_BRACKET(HEAT_FILE,DSW_AIR_P,DSW_AIR_N,HTIME,STATUS)
+       IF (STATUS /= 0) THEN
+          CALL FATAL_ERROR("COULD NOT UPATE HEAT_FILE TIME BRACKET: BOUNDS EXCEEDED?")
+       end if
+
+       CALL NC_POINT_VAR(DSW_AIR_N,VNP)
+       CALL NC_POINT_VAR(DSW_AIR_P,VPP)        
+
+       DSW_AIR = FTM%NEXT_WGHT * VNP + FTM%PREV_WGHT * VPP
+!
+
+       WDSN(1:NT) = SQRT(UUWIND(1:NT)*UUWIND(1:NT)+VVWIND(1:NT)*VVWIND(1:NT))
+
+       DO I=1,M  
+         WDS = 0.0_SP
+         DO J=1,NTVE(I)
+           WDS = WDS + WDSN(NBVE(I,J))
+         END DO
+         WDS = WDS/FLOAT(NTVE(I))
+
+! YULONG WANG 20201027==>
+		IF(TRIM(COARE_VERSION) == 'BULKALGORITHM')THEN
+        CALL BULKALGORITHM(WDS,T_AIR(I),RH_AIR(I),PA_AIR(I),T1(I,1),CLD_COV(I), &
+        DLW_AIR,HSB,HLB)
+        HEAT_NET(I) = DLW_AIR+DSW_AIR(I)*0.91+HSB+HLB
+        HEAT_SWV(I)  = DSW_AIR(I)*0.91
+        HEAT_SENSIBLE(I) = HSB
+        HEAT_LATENT(I) = HLB
+        HEAT_RLN(I)  = DLW_AIR     
+! YULONG WANG 20201027<==
+	 ELSE
+! YULONG WANG 20201027==>                                                              
+      CALL FATAL_ERROR("The value of COARE_VERSION should be 'BULKALGORITHM'")
+! YULONG WANG 20201027<==
+	 END IF  
+       END DO
 
     CASE DEFAULT
        CALL FATAL_ERROR("UNKNOWN HEAT_FORCING_TYPE IN UPDATE HEAT")
     END SELECT
 
-
-  END SUBROUTINE UPDATE_HEAT
-  !==============================================================================|
-  !==============================================================================|
+    RETURN
+  END SUBROUTINE UPDATE_HEAT_CALCULATED
   !==============================================================================|
   !==============================================================================|
   !==============================================================================|

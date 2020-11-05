@@ -45,6 +45,7 @@ SUBROUTINE CNTRL_PRMTRS
   USE MOD_TIME
   USE MOD_NCDIO
   USE MOD_NESTING
+  USE MOD_HEATFLUX
   IMPLICIT NONE
   LOGICAL TEST
   integer :: stat,ierr
@@ -138,33 +139,34 @@ SUBROUTINE CNTRL_PRMTRS
      
      
      ! FIX SCALAR_POSITIVITY_CONTROL and HEATING_TYPE SETTINGS
-     IF (HEATING_ON) THEN
-
+     
+     IF (HEATING_CALCULATE_ON) THEN
+        
         ! SET THE FVCOM NAMES FOR SURFACE HEATING
-        RHEAT = HEATING_LONGWAVE_PERCTAGE
+        RHEAT = HEATING_LONGWAVE_PERCTAGE_IN_HEATFLUX
         if (RHEAT .LT. 0) CALL FATAL_ERROR&
-             &("Name List Error: HEATING_LONGWAVE_PERCTAGE outside valid range")
+             &("Name List Error: HEATING_LONGWAVE_PERCTAGE_IN_HEATFLUX outside valid range")
         
-        ZETA1 = HEATING_LONGWAVE_LENGTHSCALE
+        ZETA1 = HEATING_LONGWAVE_LENGTHSCALE_IN_HEATFLUX
         if (ZETA1 .LT. 0) CALL FATAL_ERROR&
-             &("Name List Error: HEATING_LONGWAVE_LENGTHSCALE outside valid range")
+             &("Name List Error: HEATING_LONGWAVE_LENGTHSCALE_IN_HEATFLUX outside valid range")
         
-        ZETA2 = HEATING_SHORTWAVE_LENGTHSCALE
+        ZETA2 = HEATING_SHORTWAVE_LENGTHSCALE_IN_HEATFLUX
         if (ZETA2 .LT. 0) CALL FATAL_ERROR&
-             &("Name List Error: HEATING_SHORTWAVE_LENGTHSCALE outside valid range")
+             &("Name List Error: HEATING_SHORTWAVE_LENGTHSCALE_IN_HEATFLUX outside valid range")
         
         
-        IF(SCALAR_POSITIVITY_CONTROL .AND. (HEATING_TYPE == 'body')) THEN
+        IF(SCALAR_POSITIVITY_CONTROL .AND. (HEATING_CALCULATE_TYPE == 'body')) THEN
            CALL FATAL_ERROR &
                 &("YOU CAN NOT USE SCALAR POSITIVITY CONTROL WITH BODY HEATING")
         END IF
      ELSE 
+        HEATING_CALCULATE_TYPE = 'none'
         HEATING_TYPE = 'none'
         RHEAT=0.0_SP
         ZETA1=0.0_SP
         ZETA2=0.0_SP
      END IF
-     
      
      IF( .not. OBC_ON .or. .not. OBC_ELEVATION_FORCING_ON) THEN
         IF (OBC_LONGSHORE_FLOW_ON) THEN

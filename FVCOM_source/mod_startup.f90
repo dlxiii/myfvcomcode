@@ -51,6 +51,7 @@ MODULE MOD_STARTUP
   
 
 
+  USE MOD_DYE, ONLY: DYE
   
   IMPLICIT NONE
   
@@ -113,6 +114,7 @@ CONTAINS
 
 
 
+    CALL READ_DYE
 
 ! =================================================
     CASE(STARTUP_TYPE_CRASHRESTART)
@@ -132,6 +134,7 @@ CONTAINS
 
 
 
+    CALL READ_DYE
 
 ! =================================================
     CASE(STARTUP_TYPE_COLDSTART)
@@ -459,6 +462,28 @@ CONTAINS
 ! ------- New: Karsten Lettmann, June 2016 -----------------------
 ! ------------- end new ---------------------------------------------------------
 
+  SUBROUTINE READ_DYE
+    IMPLICIT NONE
+    TYPE(NCVAR),  POINTER :: VAR
+    TYPE(NCDIM),  POINTER :: DIM
+    LOGICAL :: FOUND
+    INTEGER :: STKCNT, K
+
+    IF(DBG_SET(DBG_SBR)) write(ipt,*) "Start: READ_DYE"
+
+    STKCNT = NC_START%FTIME%PREV_STKCNT
+
+
+    ! LOAD DYE
+    VAR => FIND_VAR(NC_START,'DYE',FOUND)
+    IF(.not. FOUND) CALL FATAL_ERROR("COULD NOT FIND VARIABLE 'DYE'&
+         & IN THE HOTSTART FILE OBJECT")
+    CALL NC_CONNECT_AVAR(VAR, DYE)
+    CALL NC_READ_VAR(VAR,STKCNT)
+
+    IF(DBG_SET(DBG_SBR)) write(ipt,*) "End: READ_DYE"
+
+  END SUBROUTINE READ_DYE
 !==============================================================================!
   SUBROUTINE READ_TS
     IMPLICIT NONE

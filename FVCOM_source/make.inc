@@ -49,7 +49,7 @@
 # TOPDIR is the directory in which this make file and the fvcom source reside
 
 #           TOPDIR        =/home/usr0/n70110d/tools/uk-fvcom-FABM-ERSEM/code/FVCOM_source
-           TOPDIR        =/home/usr0/n70110d/github/fvcom4.3/FVCOM_source
+           TOPDIR        =/home/usr0/n70110d/github/fvcom4.0/FVCOM_source
 #EXAMPLE
 # TOPDIR = /home/user/cchen/FVCOM_source
 # TOPDIR must be set!
@@ -316,7 +316,7 @@ dashL= $(empty) -L
 #           dye release      
 #---------------------------------------------------------------------------
 
-#            FLAG_20 = -DDYE_RELEASE  
+            FLAG_20 = -DDYE_RELEASE  
 
 #--------------------------------------------------------------------------
 #        SUSPENDED SEDIMENT MODEL:   UNCOMMENT TO INCLUDE MODEL
@@ -391,7 +391,8 @@ dashL= $(empty) -L
 #         3. CALCULATE THE NET HEAT FLUX USING SOLAR HEATING MODULE                          
 #--------------------------------------------------------------------------
 
-#            FLAG_27 = -DHEATING_CALCULATED  
+            FLAG_27 = -DHEATING_CALCULATED
+            FLAG_271 = -DDLW_CALCULATED  
 #            FLAG_27 = -DHEATING_CALCULATED_GL  
 #            FLAG_27 = -DHEATING_SOLAR  
 
@@ -624,7 +625,7 @@ dashL= $(empty) -L
          CC       = mpiicc
          CXX      = mpiicpc
          CFLAGS   = -O3 -no-prec-div -fp-model fast=2 -xHost
-         DEBFLGS  = #-check all -traceback
+         DEBFLGS  = #-check all -traceback #-g
          OPT      = -O3  -no-prec-div -fp-model fast=2 -xHost
 #--------------------------------------------------------------------------
 #  OTHER                   
@@ -658,7 +659,7 @@ dashL= $(empty) -L
    $(FLAG_39) $(FLAG_40) $(FLAG_41) $(FLAG_42) \
    $(FLAG_43) $(FLAG_LAM)\
    $(FLAG_101) $(FLAG_102) $(FLAG_103) $(FLAG_104) $(FLAG_105)\
-   $(FLAG_211) $(FLAG_212) $(FLAG_213) $(FLAG_251) $(FLAG_261)
+   $(FLAG_211) $(FLAG_212) $(FLAG_213) $(FLAG_251) $(FLAG_261) $(FLAG_271)
 #--------------------------------------------------------------------------
 #  Libraries           
 #--------------------------------------------------------------------------

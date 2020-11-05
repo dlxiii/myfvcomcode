@@ -426,11 +426,22 @@ PROGRAM FVCOM
   USE MOD_FORCE
   USE MOD_OBCS
 
+
   USE MOD_NESTING
 
   USE MOD_REPORT
+
+
   USE PROBES
   USE MOD_BOUNDSCHK !bounds checking
+
+
+
+
+
+
+  USE MOD_DYE
+
 
 
   
@@ -439,7 +450,6 @@ PROGRAM FVCOM
 
 
 
-! for periodic lateral boundary conditions
 
 
 
@@ -456,6 +466,7 @@ PROGRAM FVCOM
   character(len=*),parameter::CVS_Date="$Date$" ! [sng] Date string
   character(len=*),parameter::CVS_Name="$Name$" ! [sng] File name string
   character(len=*),parameter::CVS_Revision="$Revision$" ! [sng] File revision string
+
 
   INTEGER :: IERR
 
@@ -487,13 +498,12 @@ PROGRAM FVCOM
   !==============================================================================!
   ! SET DEFAULT VALUES AND READ NAME LISTS                                            
   !==============================================================================!
-
-  CALL NAMELIST
+  CALL NAMELIST ! see: NAMELIST.F
 
   !==============================================================================!
   !   SET MODEL CONTROL PARAMTERS BASED ON NAME LIST HERE                        !
   !==============================================================================!
-  CALL CNTRL_PRMTRS
+  CALL CNTRL_PRMTRS ! see: CNTRL_PRMTRS.F
 
   !==============================================================================!
   !   SET THE STARTUP TYPE TO BE USED!                                           !
@@ -503,7 +513,7 @@ PROGRAM FVCOM
   !==============================================================================!
   !   OPEN ALL FILES NEEDED BASED ON THE RUN PARAMETERS                          !
   !==============================================================================!
-  CALL OPEN_ALL
+  CALL OPEN_ALL ! see: OPEN_ALL.F
 
   !==============================================================================!
   !   SET MODEL TIME BASED ON THE NAMELIST TIME STRINGS OR RESTART FILE          !
@@ -524,6 +534,10 @@ PROGRAM FVCOM
   !   ALLOCATE ALL DOMAIN SIZE VARIABLES HERE                                    !
   !==============================================================================!
   CALL ALLOCATE_ALL
+
+  CALL ALLOC_VARS_DYE
+
+
   !==============================================================================!
   !   LOAD/SETUP PHYSICAL QUANTITIES (CORIOLIS, GRAVITY, SPONGE LAYER, XY/LATLON)!
   !==============================================================================!
@@ -538,7 +552,6 @@ PROGRAM FVCOM
   ! SETUP THE SEDIMENT MODEL (MUST COME BEFORE SETUP_FORCING)                    ! 
   !==============================================================================!
 
-
 !JQI  !==============================================================================!
 !JQI  !  SETUP THE MODEL FORCING                                                     !
 !JQI  !==============================================================================!
@@ -551,20 +564,20 @@ PROGRAM FVCOM
   !==============================================================================!
   !  SETUP THE MODEL FORCING                                                     !
   !==============================================================================!
-  CALL SETUP_FORCING
+  CALL SETUP_FORCING ! AT MOD_FORCE.F
 
   !==============================================================================!
   !  SETUP OTHER TOOLS, MODELS AND DATA ASSIMILATION                             !
   !==============================================================================!
 
-
-  !  SETUP PETSc FOR SEMI_IMPLICIT AND NON-HYDROSTATIC MODULE
-
+!  SETUP PETSc FOR SEMI_IMPLICIT AND NON-HYDROSTATIC MODULE
 
 
 
 
-  ! SETUP DATA ASSIMILATION MODE
+! SETUP DATA ASSIMILATION MODE
+
+
 ! New Open Boundary Condition ----2
 
   !==============================================================================!
@@ -576,7 +589,6 @@ PROGRAM FVCOM
 !  GET_BEGIN = READ_DATETIME('2009-01-01T00:00:00.0','ymd','UTC',status)
 !  CALL PRINT_TIME(GET_BEGIN,IPT,'2009-01-01T00:00:00.0')
 !qxu}
-
   !==============================================================================!
   !  CALL ARCHIVE TO SETUP THE OUTPUT AND DUMP CONSTANT VALUES                   !
   !==============================================================================!
@@ -586,8 +598,11 @@ PROGRAM FVCOM
   ! ORDER MATTERS - ARCHIVE_NEST MUST GO AFTER ARCHIVE DURING SETUP!
   CALL ARCHIVE_NEST
 
+
+
   CALL SET_PROBES(PROBES_ON,PROBES_NUMBER,PROBES_FILE)
   IF(OUT_STATION_TIMESERIES_ON)CALL READ_STATION_FILE
+
 
   ! Setup Bounds checking (shutdown if variables exceed threshold)
   CALL SETUP_BOUNDSCHK !bounds checking
@@ -599,6 +614,8 @@ PROGRAM FVCOM
     CALL OUT_STATION_TIMESERIES
     TIME_SERIES = STARTTIME + INTERVAL_TIME_SERIES
   END IF
+
+
   !==============================================================================!
   !  SELECT THE RUN MODE AND EXECUTE THE MAIN LOOP
   !==============================================================================!
@@ -609,7 +626,6 @@ PROGRAM FVCOM
      ! == PURE SIMULATION MODE - Instantanious data assimilation only ==============!
   CASE(FVCOM_PURE_SIM)
      ! =============================================================================!
-
 
      !==============================================================================!
      !  PREPARE TO START FVCOM'S MAIN LOOP                                          !
@@ -657,6 +673,8 @@ PROGRAM FVCOM
 
         CALL DUMP_PROBE_DATA
         IF(OUT_STATION_TIMESERIES_ON)CALL OUT_STATION_TIMESERIES
+
+
         !==============================================================================!
         !  CALL SHUTDOWN CHECK TO LOOK FOR BAD VALUES                                  !
         !==============================================================================!
@@ -675,6 +693,7 @@ PROGRAM FVCOM
         !    NESTING OUTPUT                                                            |
         !==============================================================================!
         IF(NCNEST_ON)      CALL ARCHIVE_NEST
+        
 
      END DO
      !////////////////////////// END MAIN LOOP //////////////////////////////////////
@@ -829,6 +848,7 @@ PROGRAM FVCOM
 !     END DO
     
   CASE(FVCOM_RRKF_WITHOUT_SSA)
+
   CASE(FVCOM_RRKF_WITH_SSA)
     
 !============================================END RRKF_WITH_SSA================================| 

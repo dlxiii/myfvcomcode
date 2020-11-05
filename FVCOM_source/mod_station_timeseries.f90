@@ -24,6 +24,7 @@ MODULE MOD_STATION_TIMESERIES
   LOGICAL OUT_VELOCITY_3D
   LOGICAL OUT_VELOCITY_2D
   LOGICAL OUT_WIND_VELOCITY
+  LOGICAL OUT_ATM_PRESSURE
   LOGICAL OUT_SALT_TEMP
   CHARACTER(LEN=80) OUT_INTERVAL
   
@@ -35,6 +36,7 @@ MODULE MOD_STATION_TIMESERIES
        & OUT_VELOCITY_3D,                  &
        & OUT_VELOCITY_2D,                  &
        & OUT_WIND_VELOCITY,                &
+       & OUT_ATM_PRESSURE,                 &
        & OUT_SALT_TEMP,                    &
        & OUT_INTERVAL
        
@@ -108,6 +110,7 @@ MODULE MOD_STATION_TIMESERIES
    OUT_VELOCITY_3D           = .False.
    OUT_VELOCITY_2D           = .False.
    OUT_WIND_VELOCITY         = .False.
+   OUT_ATM_PRESSURE          = .False.
    OUT_SALT_TEMP             = .False.
    OUT_INTERVAL              = "A length of time: 'seconds= ','days= ', or 'cycles= '"
    
@@ -401,6 +404,14 @@ MODULE MOD_STATION_TIMESERIES
        deallocate(ftemp)
      END IF 
 
+     IF(OUT_ATM_PRESSURE)THEN 
+       allocate(ftemp(m))
+       ftemp =pa_air(1:m)
+       i1 = lbound(ftemp,1) ; i2 = ubound(ftemp,1)
+       call putvar(i1,i2,m,mgl,1,1,"n",ftemp,nc_ofid,atmpres_s_vid,myid&
+            &,nprocs,ipt, stck_cnt)
+       deallocate(ftemp)
+     END IF 
 
 
   IERR = NF90_CLOSE(NC_OFID)
@@ -650,6 +661,13 @@ NETCDF_TIMESTRING = 'seconds after 00:00:00'
      ierr = nf90_put_att(nc_ofid,vvwind_s_vid,"coordinates","time station")
     end if
 
+    if(OUT_ATM_PRESSURE)then
+     ierr = nf90_def_var(nc_ofid,"atm_pressure",nf90_float,dynm2ds,atmpres_s_vid)
+     ierr = nf90_put_att(nc_ofid,atmpres_s_vid,"long_name","Sea level pressure")
+     ierr = nf90_put_att(nc_ofid,atmpres_s_vid,"units","(Pa)")
+     ierr = nf90_put_att(nc_ofid,atmpres_s_vid,"standard_name","atmospheric pressure")
+     ierr = nf90_put_att(nc_ofid,atmpres_s_vid,"type","data")
+    end if
 
 !--Exit Define Mode
     ierr = nf90_enddef(nc_ofid)

@@ -277,6 +277,7 @@ CONTAINS
     NC_NH_QP        = .False.
     NC_NH_RHS       = .False.
     NC_WIND_VEL     = .False.
+    NC_ATM_PRESS    = .False.
     NC_WIND_STRESS  = .False.
     NC_EVAP_PRECIP  = .False.
     NC_SURFACE_HEAT = .False.
@@ -299,6 +300,7 @@ CONTAINS
     NCSF_SALT_TEMP    = .False.
     NCSF_TURBULENCE   = .False.
     NCSF_WIND_VEL     = .False.
+    NCSF_ATM_PRESS    = .False.
     NCSF_WIND_STRESS  = .False.
     NCSF_EVAP_PRECIP  = .False.
     NCSF_SURFACE_HEAT = .False.
@@ -321,6 +323,7 @@ CONTAINS
     NCAV_NH_QP        = .False.
     NCAV_NH_RHS       = .False.
     NCAV_WIND_VEL     = .False.
+    NCAV_ATM_PRESS    = .False.  
     NCAV_WIND_STRESS  = .False.
     NCAV_WAVE_PARA    = .False.  !Jadon
     NCAV_WAVE_STRESS  = .False.  !Jadon
@@ -1376,6 +1379,7 @@ CONTAINS
 
   SUBROUTINE OPEN_FORCING
     USE CONTROL
+    USE MOD_HEATFLUX, ONLY : HEATING_CALCULATE_ON, HEATING_CALCULATE_KIND, HEATING_CALCULATE_FILE
 
     IMPLICIT NONE
     TYPE(NCFILE), POINTER :: NCF
@@ -1435,16 +1439,17 @@ CONTAINS
     end if
 
     ! Check Heat file and open
-    if (HEATING_ON .and. HEATING_KIND /= CNSTNT) then
+
+    if (HEATING_CALCULATE_ON .and. HEATING_CALCULATE_KIND /= CNSTNT) then
 
        ! TEST FILE NAME
-       charnum = index (HEATING_FILE,".nc",back)
-       if (charnum /= len_trim(HEATING_FILE)-2)&
+       charnum = index (HEATING_CALCULATE_FILE,".nc",back)
+       if (charnum /= len_trim(HEATING_CALCULATE_FILE)-2)&
             & CALL WARNING("HEATING FILE does not end in .nc", &
-            & trim(HEATING_FILE))
+            & trim(HEATING_CALCULATE_FILE))
 
        ! INITIALIZE TYPE TO HOLD FILE METADATA
-       pathnfile= trim(INPUT_DIR)//trim(HEATING_FILE)
+       pathnfile= trim(INPUT_DIR)//trim(HEATING_CALCULATE_FILE)
        CALL  NC_INIT(NCF,pathnfile)
 
        ! OPEN THE FILE AND LOAD METADATA
@@ -1456,7 +1461,6 @@ CONTAINS
        end if
 
     end if
-
 
 
     ! Check Precip file and open

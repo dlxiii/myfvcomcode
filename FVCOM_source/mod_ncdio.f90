@@ -87,6 +87,7 @@ MODULE MOD_NCDIO
   USE MOD_INPUT
 
 
+  USE mod_dye , only: dye_on
   
 
 
@@ -561,6 +562,11 @@ CONTAINS
 !!$          NCF => ADD(NCF,WIND_STRESS_FILE_OBJECT() )
        END IF
 
+       IF (NC_ATM_PRESS) THEN
+          NCF2 => ATMOSPHERIC_PRESSURE_FILE_OBJECT()
+          NCF => ADD(NCF,NCF2)
+!!$          NCF => ADD(NCF,ATMOSPHERIC_PRESSURE_FILE_OBJECT() )
+       END IF
        
        IF (NC_EVAP_PRECIP .and. PRECIPITATION_ON) THEN
           NCF2 => PRECIPITATION_FILE_OBJECT()
@@ -589,6 +595,11 @@ CONTAINS
        
        
 
+    IF(DYE_ON)THEN
+      NCF2 => DYE_FILE_OBJECT()
+      NCF => ADD(NCF,NCF2)
+!!$      NCF => ADD(NCF,DYE_FILE_OBJECT())
+    ENDIF
 
 
        
@@ -729,6 +740,10 @@ CONTAINS
           NCF => ADD(NCF,NCF2)
        END IF
 
+       IF (NCSF_ATM_PRESS) THEN
+          NCF2 => ATMOSPHERIC_PRESSURE_FILE_OBJECT()
+          NCF => ADD(NCF,NCF2)
+       END IF
        
        IF (NCSF_EVAP_PRECIP .and. PRECIPITATION_ON) THEN
           NCF2 => PRECIPITATION_FILE_OBJECT()
@@ -865,6 +880,11 @@ CONTAINS
 !!$       NC_AVG_DATA => ADD(NC_AVG_DATA,WIND_STRESS_FILE_OBJECT() )
     END IF
 
+    IF (NCAV_ATM_PRESS) THEN
+       NCF_TMP => ATMOSPHERIC_PRESSURE_FILE_OBJECT()
+       NC_AVG_DATA => ADD(NC_AVG_DATA,NCF_TMP)
+!!$       NC_AVG_DATA => ADD(NC_AVG_DATA,ATMOSPHERIC_PRESSURE_FILE_OBJECT() )
+    END IF
 
     IF (NCAV_EVAP_PRECIP .and. PRECIPITATION_ON) THEN
        NCF_TMP => PRECIPITATION_FILE_OBJECT()
@@ -890,6 +910,11 @@ CONTAINS
 
 
 
+    IF(DYE_ON)THEN
+      NCF_TMP => DYE_FILE_OBJECT()
+      NC_AVG_DATA => ADD(NC_AVG_DATA,NCF_TMP)
+!!$      NC_AVG_DATA => ADD(NC_AVG_DATA,DYE_FILE_OBJECT())
+    ENDIF
 
     
 
@@ -1243,6 +1268,10 @@ CONTAINS
 
 
 
+    IF(DYE_ON)THEN
+      NC_RST2 => DYE_FILE_OBJECT()
+      NC_RST => ADD(NC_RST,NC_RST2)
+    ENDIF
 
 
 
@@ -3451,6 +3480,17 @@ CONTAINS
        IF (STATUS /=0 ) CALL FATAL_ERROR("COULD NOT ALLOCATE MEMORY ON IO PROC FOR OUTPUT DATA:WTSURF")
        WTSURF_watts = 0.0_SP
 
+       allocate(HSENS_WATTS(MGL),stat=status)
+       IF (STATUS /=0 ) CALL FATAL_ERROR("COULD NOT ALLOCATE MEMORY ON IO PROC FOR OUTPUT DATA:HSENS")
+       HSENS_watts = 0.0_SP
+
+       allocate(HLAT_WATTS(MGL),stat=status)
+       IF (STATUS /=0 ) CALL FATAL_ERROR("COULD NOT ALLOCATE MEMORY ON IO PROC FOR OUTPUT DATA:HLAT")
+       HLAT_watts = 0.0_SP
+
+       allocate(LWRAD_WATTS(MGL),stat=status)
+       IF (STATUS /=0 ) CALL FATAL_ERROR("COULD NOT ALLOCATE MEMORY ON IO PROC FOR OUTPUT DATA:LWRAD")
+       LWRAD_watts = 0.0_SP
 
     END IF
 
@@ -3515,6 +3555,90 @@ CONTAINS
 
     NCF  => ADD(NCF,VAR)
 
+    !EJA edit to add Sensible, Latent, and Longwave radiation to output - 05/03/2016
+    ! HSENS
+    VAR  => NC_MAKE_AVAR(name='sensible_heat_flux',&
+         & values=HSENS_WATTS, DIM1= DIM_node, DIM2= DIM_time)
+
+    ATT  => NC_MAKE_ATT(name='long_name',values='Sensible Heat Flux')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='units',values='W m-2')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+    VAR  => ADD(VAR,ATT)
+
+!!$    ATT  => NC_MAKE_ATT(name='coordinates',values=CoordVar)
+    ATT  => NC_MAKE_ATT(name='coordinates',values='time lat lon')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='type',values='data')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='mesh',values='fvcom_mesh')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='location',values='node')
+    VAR  => ADD(VAR,ATT)
+
+    NCF  => ADD(NCF,VAR)
+
+    ! HLAT
+    VAR  => NC_MAKE_AVAR(name='latent_heat_flux',&
+         & values=HLAT_WATTS, DIM1= DIM_node, DIM2= DIM_time)
+
+    ATT  => NC_MAKE_ATT(name='long_name',values='Latent Heat Flux')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='units',values='W m-2')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+    VAR  => ADD(VAR,ATT)
+
+!!$    ATT  => NC_MAKE_ATT(name='coordinates',values=CoordVar)
+    ATT  => NC_MAKE_ATT(name='coordinates',values='time lat lon')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='type',values='data')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='mesh',values='fvcom_mesh')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='location',values='node')
+    VAR  => ADD(VAR,ATT)
+
+    NCF  => ADD(NCF,VAR)
+
+    ! LWRAD
+    VAR  => NC_MAKE_AVAR(name='long_wave',&
+         & values=LWRAD_WATTS, DIM1= DIM_node, DIM2= DIM_time)
+
+    ATT  => NC_MAKE_ATT(name='long_name',values='Long Wave Radiation')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='units',values='W m-2')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+    VAR  => ADD(VAR,ATT)
+
+!!$    ATT  => NC_MAKE_ATT(name='coordinates',values=CoordVar)
+    ATT  => NC_MAKE_ATT(name='coordinates',values='time lat lon')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='type',values='data')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='mesh',values='fvcom_mesh')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='location',values='node')
+    VAR  => ADD(VAR,ATT)
+
+    NCF  => ADD(NCF,VAR)
 
     IF(DBG_SET(DBG_SBR)) WRITE(IPT,*) "END SURFACE_HEATING_FILE_OBJECT"
 
@@ -3620,6 +3744,61 @@ CONTAINS
     
   END FUNCTION WIND_VELOCITY_FILE_OBJECT
 !=============================================================  
+  FUNCTION ATMOSPHERIC_PRESSURE_FILE_OBJECT() RESULT(NCF)
+    IMPLICIT NONE
+
+    INTEGER :: status
+    LOGICAL, SAVE :: IOPROC_ALLOCATED = .FALSE.
+    TYPE(NCFILE), POINTER :: NCF
+    TYPE(NCVAR),  POINTER :: VAR
+    TYPE(NCATT),  POINTER :: ATT
+
+    character(len=100)    :: timestamp, temp, netcdf_convention
+
+    IF(DBG_SET(DBG_SBR)) WRITE(IPT,*) "START ATMOSPHERIC_PRESSURE_FILE_OBJECT"
+    
+    ! IO PROC MUST ALLOCATE SPACE FOR THE ARRAYS 
+    ! THESE ARRAYS MUST HAVE THE ATTRIBUTE SAVE AND FOR CLARITY
+    ! SHOULD HAVE THE SAME NAME AS THOSE USED ON THE OTHER PROCESSORS!
+    IF(IOPROC .AND. .NOT. IOPROC_ALLOCATED) THEN
+
+       IOPROC_ALLOCATED = .true.
+
+       allocate(PA_AIR(MGL),stat=status)
+       IF (STATUS /=0 ) CALL FATAL_ERROR("COULD NOT ALLOCATE MEMORY ON IO PROC FOR OUTPUT DATA:PA_AIR")
+       pa_air = 0.0_SP
+
+    END IF
+
+
+  ! ALLOCATE THE NEW FILE OBJECT
+    NCF => NEW_FILE()
+
+
+    ! PA_AIR
+    VAR  => NC_MAKE_AVAR(name='atmos_press',&
+         & values=pa_air, DIM1= DIM_node, DIM2= DIM_time)
+
+    ATT  => NC_MAKE_ATT(name='long_name',values='Atmospheric Pressure') 
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='units',values='pascals') 
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid') 
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='coordinates',values=CoordVar) 
+    VAR  => ADD(VAR,ATT)
+    
+    ATT  => NC_MAKE_ATT(name='type',values='data') 
+    VAR  => ADD(VAR,ATT)
+
+    NCF  => ADD(NCF,VAR)
+
+    IF(DBG_SET(DBG_SBR)) WRITE(IPT,*) "END ATMOSPHERIC_PRESSURE_FILE_OBJECT"
+
+  END FUNCTION ATMOSPHERIC_PRESSURE_FILE_OBJECT
 !=============================================================  
   FUNCTION WIND_STRESS_FILE_OBJECT() RESULT(NCF)
     IMPLICIT NONE
@@ -4559,6 +4738,68 @@ CONTAINS
 
 
 !=============================================================  
+  FUNCTION DYE_FILE_OBJECT() RESULT(NCF)
+    USE MOD_DYE
+
+    IMPLICIT NONE
+
+    INTEGER :: status, I
+    LOGICAL, SAVE :: IOPROC_ALLOCATED = .FALSE.
+    TYPE(NCFILE), POINTER :: NCF
+    TYPE(NCVAR),  POINTER :: VAR
+    TYPE(NCATT),  POINTER :: ATT
+
+
+    IF(DBG_SET(DBG_SBR)) WRITE(IPT,*) "START DYE_FILE_OBJECT"
+
+    ! IO PROC MUST ALLOCATE SPACE FOR THE ARRAYS 
+    ! THESE ARRAYS MUST HAVE THE ATTRIBUTE SAVE AND FOR CLARITY
+    ! SHOULD HAVE THE SAME NAME AS THOSE USED ON THE OTHER PROCESSORS!
+    IF(IOPROC .AND. .NOT. IOPROC_ALLOCATED) THEN
+
+       IOPROC_ALLOCATED = .true.
+
+       allocate(DYE(MGL,KB),stat=status)
+       IF (STATUS /=0 ) CALL FATAL_ERROR("COULD NOT ALLOCATE MEMORY ON IO PROC FOR OUTPUT DATA:EL")
+       DYE = 0.0_SP
+
+    END IF
+
+    ! ALLOCATE THE NEW FILE OBJECT
+    NCF => NEW_FILE()
+
+
+    ! Dye
+    VAR  => NC_MAKE_AVAR(name='DYE',&
+         & values=DYE, DIM1= DIM_node, DIM2= DIM_siglay, DIM3=DIM_time)
+
+    ATT  => NC_MAKE_ATT(name='long_name',values='Water Surface Elevation') 
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='units',values='meters') 
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='positive',values='up') 
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='standard_name',values='sea_surface_height_above_geoid') 
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='grid',values='SigmaLayer_Mesh') 
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='coordinates',values=CoordVar) 
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='type',values='data') 
+    VAR  => ADD(VAR,ATT)
+
+    NCF  => ADD(NCF,VAR)
+
+
+    IF(DBG_SET(DBG_SBR)) WRITE(IPT,*) "END DYE_FILE_OBJECT"
+
+  END FUNCTION DYE_FILE_OBJECT
 
 !=============================================================  
 

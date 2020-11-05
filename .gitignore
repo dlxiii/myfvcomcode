@@ -11,3 +11,4 @@ FVCOM_source/libs/proj/*
 FVCOM_source/fvcom
 FVCOM_source/libfvcom.a
 *.f90
+*.f90
