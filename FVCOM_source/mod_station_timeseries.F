@@ -537,7 +537,7 @@ MODULE MOD_STATION_TIMESERIES
     ! SWRAD_WATTS,WTSURF_WATTS
     IF(OUT_DSW)THEN 
       allocate(ftemp(m))
-      ftemp =SWRAD_WATTS(1:m)
+      ftemp =SWRAD_WATTS(1:m)/RAMP
       i1 = lbound(ftemp,1) ; i2 = ubound(ftemp,1)
       call putvar(i1,i2,m,mgl,1,1,"n",ftemp,nc_ofid,dsw_s_vid,myid&
            &,nprocs,ipt, stck_cnt)
@@ -545,7 +545,7 @@ MODULE MOD_STATION_TIMESERIES
     END IF 
     IF(OUT_NET)THEN 
       allocate(ftemp(m))
-      ftemp =WTSURF_WATTS(1:m)
+      ftemp =WTSURF_WATTS(1:m)/RAMP
       i1 = lbound(ftemp,1) ; i2 = ubound(ftemp,1)
       call putvar(i1,i2,m,mgl,1,1,"n",ftemp,nc_ofid,net_s_vid,myid&
            &,nprocs,ipt, stck_cnt)
@@ -555,7 +555,7 @@ MODULE MOD_STATION_TIMESERIES
     ! calculated longwave radiation from the sea
     IF(OUT_SQL)THEN 
       allocate(ftemp(m))
-      ftemp =LWRAD_WATTS(1:m)
+      ftemp =LWRAD_WATTS(1:m)/RAMP
       i1 = lbound(ftemp,1) ; i2 = ubound(ftemp,1)
       call putvar(i1,i2,m,mgl,1,1,"n",ftemp,nc_ofid,sql_s_vid,myid&
            &,nprocs,ipt, stck_cnt)
@@ -564,7 +564,7 @@ MODULE MOD_STATION_TIMESERIES
     ! calculated sensible heat flux
     IF(OUT_SQH)THEN 
       allocate(ftemp(m))
-      ftemp =HSENS_WATTS(1:m)
+      ftemp =HSENS_WATTS(1:m)/RAMP
       i1 = lbound(ftemp,1) ; i2 = ubound(ftemp,1)
       call putvar(i1,i2,m,mgl,1,1,"n",ftemp,nc_ofid,sqh_s_vid,myid&
            &,nprocs,ipt, stck_cnt)
@@ -573,7 +573,7 @@ MODULE MOD_STATION_TIMESERIES
     ! calculated latent heat flux
     IF(OUT_SQE)THEN 
       allocate(ftemp(m))
-      ftemp =HLAT_WATTS(1:m)
+      ftemp =HLAT_WATTS(1:m)/RAMP
       i1 = lbound(ftemp,1) ; i2 = ubound(ftemp,1)
       call putvar(i1,i2,m,mgl,1,1,"n",ftemp,nc_ofid,sqe_s_vid,myid&
            &,nprocs,ipt, stck_cnt)
