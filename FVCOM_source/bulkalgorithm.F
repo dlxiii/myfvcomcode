@@ -85,6 +85,7 @@
         END IF
     END IF
 
+!*********** adjust them to upward value negitive ***************
     sql = sql * -1.
     sqh = sqh * -1.
     sqe = sqh * -1.
