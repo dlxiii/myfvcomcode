@@ -201,6 +201,13 @@ SUBROUTINE ADV_T
      RF(:,1)=RF(:,1)+ROFVROS*(QEVAP+QPREC)*T1(:,1)
   END IF
 
+! YULONG WANG 20201108==>  
+# if defined (DLW_CALCULATED)
+   RF(:,1)=RF(:,1)+ROFVROS*-1.*(QEVAP+QPREC)*T1(:,1)
+  END IF
+# endif	 
+! YULONG WANG 20201027<==
+
   !
   !--Calculate the Advection and Horizontal Diffusion Terms----------------------!
   !

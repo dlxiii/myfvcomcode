@@ -30,9 +30,9 @@
 !------------------------------------------------------------------------------
 # if defined (HEATING_CALCULATED)
 # if defined (DLW_CALCULATED)
-  subroutine bulkalgorithm(wind,tair,humidity,pair,TC,cloud,sql,sqh,sqe)
+  subroutine bulkalgorithm(wind,tair,humidity,pair,TC,cloud,sql,sqh,sqe,rain,evap)
 
-! Based on MEC model
+! Based on MEC model, bulk.f
 ! Yulong Wang
 ! Oct 27, 2020
 
@@ -42,7 +42,23 @@
     real :: Ca,Sss,sigma,Ccc,Lll,Ce,Ced,Ch,Chd
     real :: windabs,dt,TaK,es,ea,rhoa,qs,qa,dq
     real :: tbifu
+    real :: rain,evap
 
+!===========================================================================================|
+!   Inp/Otp Meteorological Boundary Conditions for Calculating Heat Flux                    |
+!===========================================================================================|
+!    [I]  wind speed at height 2m:             m/s          "wind"                          |
+!    [I]  bulk air temperature at height 2m:   degree(C)    "tair"                          |
+!    [I]  relative humidity at height 2m:      (%)          "humidity"                      |
+!    [I]  surface pressure:                    mb[0.1kPa]   "pair"                          |
+!    [I]  calculated water temperature:        degree(C)    "TC"                            |
+!    [I]  cloud cover:                         (0-1)        "cloud"                         |
+!    [O]  Longwave radiation from sea surface: w/m^2        "sql"                           |
+!    [O]  Sensible heat flux due to con&trans: w/m^2        "sqh"                           |
+!    [O]  Latent heat flux due to evaporation: w/m^2        "sqe"                           |
+!    [I]  precipitation:                       kg/m2/s      "rain",ocean lose water is negative|   
+!    [O]  evaporation:                         kg/m2/s      "evap",ocean lose water is negative|  
+!===========================================================================================|
 
 !***********  meteorological constants ***********************************
     Ca=1010.         ! Specific heat of air at constant pressure, [J/kg/K]
@@ -59,9 +75,9 @@
     windabs=ABS(wind)
     dt=TC-tair
     TaK=tair+273.15
-    es=6.1078*10**(7.5*tair/TaK)
-    ea=es*humidity/100.
-    rhoa=1.293*(273.15/TaK)*(pair/1013.25)*(1.0-0.378*(ea/pair))
+    es=6.1078*10**(7.5*tair/TaK)                                    ! [hPa]
+    ea=es*humidity/100.                                             ! [hPa]
+    rhoa=1.293*(273.15/TaK)*(pair/1013.25)*(1.0-0.378*(ea/pair))    ! [kg/m3]
     qs=0.622*es/(pair-0.378*es)
     qa=0.622*ea/(pair-0.378*ea)
     dq=qs-qa
@@ -89,6 +105,19 @@
     sql = sql * -1.
     sqh = sqh * -1.
     sqe = sqh * -1.
+
+!*********** rainfall and evaporation ***************
+    rain_neg = rain * -1.                          ! 
+    IF (windabs>=1.) THEN
+        evap = rhoa*Ce*dt*windabs * -1.
+    ELSE
+        tbifu=dt+0.61*TaK*dq
+        IF (tbifu< 0.) THEN
+            evap = rain_neg
+        ELSE    
+            evap = rhoa*Ced*tbifu**(1./3.)*dq * -1.
+        END IF
+    END IF
 
   end subroutine bulkalgorithm
 # endif

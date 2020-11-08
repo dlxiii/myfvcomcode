@@ -384,6 +384,8 @@ MODULE MOD_FORCE
   TYPE(NCVAR), POINTER :: WAVES_UB_BOT_N,    WAVES_UB_BOT_P    ! BOTTOM VELOCITY
   ! =================================================================
   ! SURFACE PRECIPTATION DATA
+! YULONG WANG 20201108==>
+# if !defined (DLW_CALCULATED)  
   INTEGER :: PRECIP_FORCING_TYPE
 
   INTEGER,PARAMETER :: PRECIP_IS_WRFGRID     = 0
@@ -397,6 +399,8 @@ MODULE MOD_FORCE
   TYPE(INTERP_WEIGHTS),POINTER :: PRECIP_INTP_C
   TYPE(NCVAR), POINTER :: PRECIP_PRE_N, PRECIP_PRE_P   ! PRECIPITATION
   TYPE(NCVAR), POINTER :: PRECIP_EVP_N, PRECIP_EVP_P   ! EVAPORATION
+# endif
+! YULONG WANG 20201108<==
 
   ! =================================================================
   ! AIR PRESSURE FILE DATA 
@@ -473,7 +477,11 @@ MODULE MOD_FORCE
   PUBLIC :: UPDATE_OFFLINE_BIOLOGY_FORCING
 # endif
 
+! YULONG WANG 20201108==>
+# if !defined (DLW_CALCULATED)
   PUBLIC :: UPDATE_PRECIPITATION
+! YULONG WANG 20201108==>
+# if !defined (DLW_CALCULATED)
   PUBLIC :: UPDATE_AIRPRESSURE
   PUBLIC :: UPDATE_TIDE
   PUBLIC :: UPDATE_RIVERS
@@ -520,6 +528,7 @@ CONTAINS
     NULLIFY(HEAT_FILE,HEAT_INTP_N, HEAT_INTP_C, T_AIR_P, T_AIR_N,  &
          &  RH_AIR_P, RH_AIR_N, PA_AIR_P, PA_AIR_N, CLD_COV_P,     &
          &  CLD_COV_N, DSW_AIR_P, DSW_AIR_N)
+    NULLIFY(PRECIP_PRE_N, PRECIP_PRE_P)
 # else
     NULLIFY(HEAT_FILE,HEAT_INTP_N, HEAT_INTP_C, T_AIR_P, T_AIR_N,  &
          &  RH_AIR_P, RH_AIR_N, PA_AIR_P, PA_AIR_N, DLW_AIR_P,     &
@@ -606,7 +615,11 @@ CONTAINS
     CALL SURFACE_HEATING
 # endif    
     CALL SURFACE_WINDSTRESS
+! YULONG WANG 20201108==>
+# if !defined (DLW_CALCULATED) 
     CALL SURFACE_PRECIPITATION
+# endif
+! YULONG WANG 20201108<==
     CALL SURFACE_AIRPRESSURE
 # if defined (HEATING_CALCULATED)
     CALL SURFACE_HEATING_CALCULATED
@@ -6262,7 +6275,8 @@ CONTAINS
     REAL(SP), POINTER :: STORAGE_ARR(:,:), STORAGE_VEC(:)
 ! YULONG WANG 20201027==>																														   
 # if defined (DLW_CALCULATED)																												   
-   CHARACTER(LEN=60) :: t_airstrng, rh_airstrng, pa_airstrng, cld_covstrng, dsw_airstrng
+    CHARACTER(LEN=60) :: t_airstrng, rh_airstrng, pa_airstrng, cld_covstrng, dsw_airstrng
+    CHARACTER(LEN=60) :: prcstr_strng
 # else													   
     CHARACTER(LEN=60) :: t_airstrng, rh_airstrng, pa_airstrng, dlw_airstrng, dsw_airstrng
 # endif
@@ -6327,7 +6341,7 @@ CONTAINS
    
    IF(HEATING_FRESHWATER)THEN
      ALLOCATE(USRCOARE(0:MT)) ; USRCOARE = 0.0_SP
-   END IF
+   END IF   
 # endif
 ! YULONG WANG 20201027<==	
 !----------------------------REPORT--------------------------------------------!
@@ -6344,6 +6358,7 @@ CONTAINS
 !    downward longwave radiation:         w/m^2        "dlw_air"    if DLW CALCULATED is OFF|
 !    cloud cover:                         (0-1)        "cld_cov"    if DLW CALCULATED is ON |
 !    downward shortwave radiation:        w/m^2        "dsw_air"                            |
+!    precipitation:                                    "QPREC" if DLW CALCULATED is ON      |   
 !===========================================================================================|
 
     ! DETERMINE HOW TO LOAD THE DATA
@@ -6355,6 +6370,7 @@ CONTAINS
 ! YULONG WANG 20201027==>																														   
 # if defined (DLW_CALCULATED)
        write(cld_covstrng,'(f8.4)') CLOUD_COVERAGE
+       write(prcstr_strng,'(f8.4)') PRECIPITATION_PRC
 # else			 
        write(dlw_airstrng,'(f8.4)') LONGWAVE_RADIATION
 # endif
@@ -6369,6 +6385,7 @@ CONTAINS
 ! YULONG WANG 20201027==>																														   
 # if defined (DLW_CALCULATED)															  
           WRITE(IPT,*)"          Cloud Coverage Rate: "//trim(cld_covstrng)
+          WRITE(IPT,*)"                PRECIPITATION: "//trim(prcstr_strng)
 # else
           WRITE(IPT,*)"  Downward Longwave Radiation: "//trim(dlw_airstrng)
 # endif
@@ -6376,7 +6393,13 @@ CONTAINS
           WRITE(IPT,*)" Downward shortwave Radiation: "//trim(dsw_airstrng)
        END IF
 
+! YULONG WANG 20201027==>																														   
+# if defined (DLW_CALCULATED)	       
+       ALLOCATE(HEAT_CALCULATE_COMMENTS(7))
+# else
        ALLOCATE(HEAT_CALCULATE_COMMENTS(6))
+# endif
+! YULONG WANG 20201027<==
        HEAT_CALCULATE_COMMENTS(1) = "Using constant heating from run file:"
        HEAT_CALCULATE_COMMENTS(2) = "Bulk Air Temperature:"//trim(t_airstrng)
        HEAT_CALCULATE_COMMENTS(3) = "Relative Humidity:"//trim(rh_airstrng)
@@ -6389,6 +6412,11 @@ CONTAINS
 # endif
 ! YULONG WANG 20201027<==	
        HEAT_CALCULATE_COMMENTS(6) = "Downward Shortwave Radiation:"//trim(dsw_airstrng)
+! YULONG WANG 20201027==>																														   
+# if defined (DLW_CALCULATED)	 
+       HEAT_CALCULATE_COMMENTS(7) = "Precipitation:"//trim(prcstr_strng)
+# endif
+! YULONG WANG 20201027<==
 
        RETURN
 
@@ -6735,6 +6763,41 @@ CONTAINS
        IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
        CALL NC_CONNECT_PVAR(CLD_COV_P,STORAGE_VEC)
        NULLIFY(STORAGE_VEC)
+
+       ! PRECIPITATION
+       VAR => FIND_VAR(PRECIP_FILE,"Precipitation",FOUND)
+       IF(.not. FOUND) CALL FATAL_ERROR &
+            & ("IN SURFACE WIND BOUNDARY CONDITION FILE OBJECT",&
+            & "FILE NAME: "//TRIM(PRECIPITATION_FILE),&
+            & "COULD NOT FIND VARIABLE 'PRECIPITATION'")
+
+       ! MAKE SPACE FOR THE DATA FROM THE FILE
+       ALLOCATE(STORAGE_ARR(lons,lats), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE PRECIPITATION")
+       PRECIP_PRE_N => reference_var(var)
+       CALL NC_CONNECT_PVAR(PRECIP_PRE_N,STORAGE_ARR)
+       NULLIFY(STORAGE_ARR)
+
+       ! MAKE SPACE FOR THE INTERPOLATED DATA
+       ALLOCATE(STORAGE_VEC(0:MT), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE PRECIPITATION")
+       CALL NC_CONNECT_PVAR(PRECIP_PRE_N,STORAGE_VEC)
+       NULLIFY(STORAGE_VEC)
+
+
+       ! MAKE SPACE FOR THE DATA FROM THE FILE
+       ALLOCATE(STORAGE_ARR(lons,lats), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE PRECIPITATION")
+       PRECIP_PRE_P => reference_var(var)
+       CALL NC_CONNECT_PVAR(PRECIP_PRE_P,STORAGE_ARR)
+       NULLIFY(STORAGE_ARR)
+
+       ! MAKE SPACE FOR THE INTERPOLATED DATA
+       ALLOCATE(STORAGE_VEC(0:MT), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE PRECIPITATION")
+       CALL NC_CONNECT_PVAR(PRECIP_PRE_P,STORAGE_VEC)
+       NULLIFY(STORAGE_VEC)
+
 !  
 # else
        ! DOWNWARD LONGWAVE RADIATION
@@ -6929,6 +6992,29 @@ CONTAINS
        IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
        CALL NC_CONNECT_PVAR(CLD_COV_P,STORAGE_VEC)
        NULLIFY(STORAGE_VEC)
+
+       ! PRECIPITATION
+       VAR => FIND_VAR(HEAT_FILE,"Precipitation",FOUND)
+       IF(.not. FOUND) CALL FATAL_ERROR &
+            & ("IN SURFACE HEATING BOUNDARY CONDITION FILE OBJECT",&
+            & "FILE NAME: "//TRIM(HEATING_CALCULATE_FILE),&
+            & "COULD NOT FIND VARIABLE 'Precipitation'")
+
+       ! MAKE SPACE FOR THE DATA FROM THE FILE
+       PRECIP_PRE_N => reference_var(var)
+       ALLOCATE(STORAGE_VEC(0:MT), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
+       CALL NC_CONNECT_PVAR(PRECIP_PRE_N,STORAGE_VEC)
+       NULLIFY(STORAGE_VEC)
+
+
+       ! MAKE SPACE FOR THE DATA FROM THE FILE
+       PRECIP_PRE_P => reference_var(var)
+       ALLOCATE(STORAGE_VEC(0:MT), stat = status)
+       IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE HEATING")
+       CALL NC_CONNECT_PVAR(PRECIP_PRE_P,STORAGE_VEC)
+       NULLIFY(STORAGE_VEC)
+
 !
 # else
        ! DOWNWARD LONGWAVE RADIATION
@@ -6995,6 +7081,7 @@ CONTAINS
 ! YULONG WANG 20201027==>	
 # if defined (DLW_CALCULATED)	
     cld_cov_n%curr_stkcnt = 0;cld_cov_p%curr_stkcnt = 0
+    precip_pre_n%curr_stkcnt = 0;precip_pre_p%curr_stkcnt = 0
 # else	
     dlw_air_n%curr_stkcnt = 0;dlw_air_p%curr_stkcnt = 0
 # endif
@@ -10718,7 +10805,8 @@ CONTAINS
 
 !================================================================
 !================================================================
-
+! YULONG WANG 20201108==>
+# if !defined (DLW_CALCULATED)  
   SUBROUTINE SURFACE_PRECIPITATION
     IMPLICIT NONE
     ! SOME NC POINTERS
@@ -11004,7 +11092,7 @@ CONTAINS
        IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE PRECIPITATION")
        CALL NC_CONNECT_PVAR(PRECIP_PRE_P,STORAGE_VEC)
        NULLIFY(STORAGE_VEC)
-
+        
        ! WIND STRESS IN THE X or EAST-WEST DIRECTION
        VAR => FIND_VAR(PRECIP_FILE,"Evaporation",FOUND)
        IF(.not. FOUND) CALL FATAL_ERROR &
@@ -11094,7 +11182,7 @@ CONTAINS
        IF(STATUS /= 0) CALL FATAL_ERROR("ALLOCATION ERROR IN SURFACE PRECIPITATION")
        CALL NC_CONNECT_PVAR(PRECIP_PRE_P,STORAGE_VEC)
        NULLIFY(STORAGE_VEC)
-
+      
        ! EVAP
        VAR => FIND_VAR(PRECIP_FILE,"evap",FOUND)
        IF(.not. FOUND) CALL FATAL_ERROR &
@@ -11142,6 +11230,8 @@ CONTAINS
 
     IF(DBG_SET(DBG_SBR)) write(IPT,*) "END SURFACE_PRECIPITATION"
   END SUBROUTINE SURFACE_PRECIPITATION
+# endif
+! YULONG WANG 20201108<==
   !==============================================================================|
   SUBROUTINE UPDATE_RIVERS(NOW,FLUX,TEMP,SALT,WQM,SED,BIO)
 # if defined (BioGen)
@@ -12458,7 +12548,13 @@ CONTAINS
   !==============================================================================|
   !==============================================================================|
 # if defined (HEATING_CALCULATED)
+! YULONG WANG 20201027==>
+# if defined (DLW_CALCULATED)
+  SUBROUTINE UPDATE_HEAT_CALCULATED(NOW,HEAT_SWV,HEAT_NET,HEAT_SENSIBLE,HEAT_LATENT,HEAT_RLN,QPREC,QEVAP)
+# else
   SUBROUTINE UPDATE_HEAT_CALCULATED(NOW,HEAT_SWV,HEAT_NET,HEAT_SENSIBLE,HEAT_LATENT,HEAT_RLN)
+# endif
+! YULONG WANG 20201027<==
     IMPLICIT NONE
     TYPE(TIME), INTENT(IN)    :: NOW
     TYPE(TIME)                :: HTIME
@@ -12466,7 +12562,8 @@ CONTAINS
     REAL(SP), ALLOCATABLE     :: HEAT_SENSIBLE(:), HEAT_LATENT(:), HEAT_RLN(:)
 ! YULONG WANG 20201027==>
 # if defined (DLW_CALCULATED)
-    REAL(SP)                  :: DLW_AIR
+    REAL(SP)                  :: NLW_AIR
+    REAL(SP), ALLOCATABLE     :: QEVAP(:),QPREC(:)
 # endif
 ! YULONG WANG 20201027<==
     TYPE(NCFTIME), POINTER    :: FTM
@@ -12492,6 +12589,16 @@ CONTAINS
     IF(.NOT. ALLOCATED(HEAT_RLN)) CALL FATAL_ERROR &
          &("THE LONGWAVE HEAT VARIABLE PASSED TO UPDATE IS NOT ALLOCATED")
 
+! YULONG WANG 20201027==>
+# if defined (DLW_CALCULATED)       
+    IF(.NOT. ALLOCATED(QPREC)) CALL FATAL_ERROR &
+         &("THE PRECIPITATION VARIABLE PASSED TO UPDATE IS NOT ALLOCATED")
+    
+    IF(.NOT. ALLOCATED(QEVAP)) CALL FATAL_ERROR &
+         &("THE EVAPORATION VARIABLE PASSED TO UPDATE IS NOT ALLOCATED")
+# endif
+! YULONG WANG 20201027<== 
+
     IF(WIND_TYPE /= 'speed')CALL FATAL_ERROR("WIND_TYPE must be 'speed' for heat flux calculating")
        
 !===================================================
@@ -12504,7 +12611,8 @@ CONTAINS
 	PA_AIR(1:MT)  = SURFACE_PRESSURE
 ! YULONG WANG 20201027==>
 # if defined (DLW_CALCULATED)
-	CLD_COV(1:MT) = CLOUD_COVERAGE
+     CLD_COV(1:MT) = CLOUD_COVERAGE
+     QPREC(1:MT) = PRECIPITATION_PRC
 # else
 	DLW_AIR(1:MT) = LONGWAVE_RADIATION
 # endif
@@ -12586,14 +12694,17 @@ CONTAINS
 			END IF  
 ! YULONG WANG 20201027==>
 # else
-		IF(TRIM(COARE_VERSION) == 'BULKALGORITHM')THEN
-        CALL BULKALGORITHM(WDS,T_AIR(I),RH_AIR(I),PA_AIR(I),T1(I,1),CLD_COV(I), &
-        DLW_AIR,HSB,HLB)
-        HEAT_NET(I)  = DSW_AIR(I)*0.91 + DLW_AIR + HSB + HLB
-        HEAT_SWV(I)  = DSW_AIR(I)*0.91
-        HEAT_SENSIBLE(I) = HSB
-        HEAT_LATENT(I) = HLB
-        HEAT_RLN(I)  = DLW_AIR
+          IF(TRIM(COARE_VERSION) == 'BULKALGORITHM')THEN
+               !RAIN(I) = QPREC(I)*3600*1000  ! change unit to mm/hr  from m/s
+               RAIN(I) = QPREC(I)*1000  ! From m/s to kg/m2/s, 1kg/m2/s = 1mm/s, 1m/s = 1000kg/m2/s
+               CALL BULKALGORITHM(WDS,T_AIR(I),RH_AIR(I),PA_AIR(I),T1(I,1),CLD_COV(I), &
+               NLW_AIR,HSB,HLB,RAIN(I),EVAP)
+               HEAT_NET(I)  = DSW_AIR(I)*0.91 + NLW_AIR + HSB + HLB ! SAME SYMBOL SAME DIRECTION
+               HEAT_SWV(I)  = DSW_AIR(I)*0.91
+               HEAT_SENSIBLE(I) = HSB
+               HEAT_LATENT(I) = HLB
+               HEAT_RLN(I)  = NLW_AIR
+               QEVAP(I) = EVAP
 # endif
 ! YULONG WANG 20201027<==
 		ELSE
@@ -12690,6 +12801,16 @@ CONTAINS
        CALL NC_POINT_VAR(CLD_COV_P,VPP)        
 
        CLD_COV = FTM%NEXT_WGHT * VNP + FTM%PREV_WGHT * VPP
+
+       ! PRECIPITATION
+       CALL UPDATE_VAR_BRACKET(PRECIP_FILE,PRECIP_PRE_P,PRECIP_PRE_N,PTIME,STATUS,PRECIP_INTP_N)
+       IF (STATUS /= 0) THEN
+          CALL FATAL_ERROR("COULD NOT UPATE PRECIP BRACKET: BOUNDS EXCEEDED?")
+       end if
+
+       CALL NC_POINT_VAR(PRECIP_PRE_N,VNP)
+       CALL NC_POINT_VAR(PRECIP_PRE_P,VPP)   
+       QPREC = FTM%NEXT_WGHT * VNP + FTM%PREV_WGHT * VPP
 !
 # else
        ! DOWNWARD LONGWAVE RADIATION
@@ -12793,14 +12914,16 @@ CONTAINS
 	   END IF  
 ! YULONG WANG 20201027==>
 # else
-		IF(TRIM(COARE_VERSION) == 'BULKALGORITHM')THEN
-        CALL BULKALGORITHM(WDS,T_AIR(I),RH_AIR(I),PA_AIR(I),T1(I,1),CLD_COV(I), &
-        DLW_AIR,HSB,HLB)
-        HEAT_NET(I) = DLW_AIR+DSW_AIR(I)*0.91+HSB+HLB
-        HEAT_SWV(I)  = DSW_AIR(I)*0.91
-        HEAT_SENSIBLE(I) = HSB
-        HEAT_LATENT(I) = HLB
-        HEAT_RLN(I)  = DLW_AIR    
+          IF(TRIM(COARE_VERSION) == 'BULKALGORITHM')THEN
+               !RAIN(I) = QPREC(I)*3600*1000  ! change unit to mm/hr  from m/s
+               RAIN(I) = QPREC(I)*1000  ! From m/s to kg/m2/s, 1kg/m2/s = 1mm/s, 1m/s = 1000kg/m2/s
+               CALL BULKALGORITHM(WDS,T_AIR(I),RH_AIR(I),PA_AIR(I),T1(I,1),CLD_COV(I), &
+               NLW_AIR,HSB,HLB,RAIN(I),EVAP)
+               HEAT_NET(I) = NLW_AIR+DSW_AIR(I)*0.91+HSB+HLB
+               HEAT_SWV(I)  = DSW_AIR(I)*0.91
+               HEAT_SENSIBLE(I) = HSB
+               HEAT_LATENT(I) = HLB
+               HEAT_RLN(I)  = NLW_AIR    
 # endif
 ! YULONG WANG 20201027<==
 	 ELSE
@@ -12864,6 +12987,17 @@ CONTAINS
        CALL NC_POINT_VAR(CLD_COV_P,VPP)        
 
        CLD_COV = FTM%NEXT_WGHT * VNP + FTM%PREV_WGHT * VPP
+
+       ! PRECIPITATION
+       CALL UPDATE_VAR_BRACKET(PRECIP_FILE,PRECIP_PRE_P,PRECIP_PRE_N,PTIME,STATUS,PRECIP_INTP_N)
+       IF (STATUS /= 0) THEN
+          CALL FATAL_ERROR("COULD NOT UPATE PRECIP BRACKET: BOUNDS EXCEEDED?")
+       end if
+
+       CALL NC_POINT_VAR(PRECIP_PRE_N,VNP)
+       CALL NC_POINT_VAR(PRECIP_PRE_P,VPP)   
+
+       QPREC = FTM%NEXT_WGHT * VNP + FTM%PREV_WGHT * VPP
 !
 # else
        ! DOWNWARD LONGWAVE RADIATION
@@ -12967,14 +13101,16 @@ CONTAINS
 	   END IF  
 ! YULONG WANG 20201027==>
 # else
-		IF(TRIM(COARE_VERSION) == 'BULKALGORITHM')THEN
-        CALL BULKALGORITHM(WDS,T_AIR(I),RH_AIR(I),PA_AIR(I),T1(I,1),CLD_COV(I), &
-        DLW_AIR,HSB,HLB)
-        HEAT_NET(I) = DLW_AIR+DSW_AIR(I)*0.91+HSB+HLB
-        HEAT_SWV(I)  = DSW_AIR(I)*0.91
-        HEAT_SENSIBLE(I) = HSB
-        HEAT_LATENT(I) = HLB
-        HEAT_RLN(I)  = DLW_AIR     
+          IF(TRIM(COARE_VERSION) == 'BULKALGORITHM')THEN
+               !RAIN(I) = QPREC(I)*3600*1000  ! change unit to mm/hr  from m/s
+               RAIN(I) = QPREC(I)*1000  ! From m/s to kg/m2/s, 1kg/m2/s = 1mm/s, 1m/s = 1000kg/m2/s
+               CALL BULKALGORITHM(WDS,T_AIR(I),RH_AIR(I),PA_AIR(I),T1(I,1),CLD_COV(I), &
+               NLW_AIR,HSB,HLB,RAIN(I),EVAP)
+               HEAT_NET(I) = NLW_AIR+DSW_AIR(I)*0.91+HSB+HLB
+               HEAT_SWV(I)  = DSW_AIR(I)*0.91
+               HEAT_SENSIBLE(I) = HSB
+               HEAT_LATENT(I) = HLB
+               HEAT_RLN(I)  = NLW_AIR     
 # endif
 ! YULONG WANG 20201027<==
 	 ELSE
@@ -13167,12 +13303,12 @@ CONTAINS
   
        END DO
        
-#      if defined (MULTIPROCESSOR)
+# if defined (MULTIPROCESSOR)
        !*** Edit to fix halo-element problem (output heatflux into NetCDF to verify) - based on Xueming Zhu's analysis - EJA 6/17/2013 ***"
        IF(PAR) CALL AEXCHANGE(NC,MYID,NPROCS,HEAT_NET,HEAT_SWV)
        !EJA  - add HS,HL,RLN
        IF(PAR) CALL AEXCHANGE(NC,MYID,NPROCS,HEAT_SENSIBLE,HEAT_LATENT,HEAT_RLN)
-#      endif
+# endif
 
     CASE(HEAT_IS_FVCOMGRID)
 
@@ -13820,7 +13956,8 @@ CONTAINS
   END SUBROUTINE UPDATE_OFFLINE_BIOLOGY_FORCING
 # endif
 
-
+! YULONG WANG 20201108==>
+# if !defined (DLW_CALCULATED)
 !==============================================================================|
   SUBROUTINE UPDATE_PRECIPITATION(NOW,Qprec,Qevap)
     IMPLICIT NONE
@@ -13840,7 +13977,7 @@ CONTAINS
     SELECT CASE(PRECIPITATION_KIND)
 !===================================================
     CASE (CNSTNT)
-       
+
        Qprec(1:MT) = PRECIPITATION_PRC
        Qevap(1:MT) = PRECIPITATION_EVP
 
@@ -13881,7 +14018,7 @@ CONTAINS
     CASE(PRECIP_IS_WRFGRID)
 
        FTM => PRECIP_FILE%FTIME
-       
+
        ! PRECIPITATION
        CALL UPDATE_VAR_BRACKET(PRECIP_FILE,PRECIP_PRE_P,PRECIP_PRE_N,PTIME,STATUS,PRECIP_INTP_N)
        IF (STATUS /= 0) THEN
@@ -13891,7 +14028,7 @@ CONTAINS
        CALL NC_POINT_VAR(PRECIP_PRE_N,VNP)
        CALL NC_POINT_VAR(PRECIP_PRE_P,VPP)   
        Qprec = FTM%NEXT_WGHT * VNP + FTM%PREV_WGHT * VPP
-       
+     
        ! EVAPORATION
        CALL UPDATE_VAR_BRACKET(PRECIP_FILE,PRECIP_EVP_P,PRECIP_EVP_N,PTIME,STATUS,PRECIP_INTP_N)
        IF (STATUS /= 0) THEN
@@ -13934,7 +14071,8 @@ CONTAINS
 
   END SUBROUTINE UPDATE_PRECIPITATION
   !==============================================================================|
-
+# if !defined (DLW_CALCULATED)
+! YULONG WANG 20201108<==
 
 !==============================================================================|
   SUBROUTINE UPDATE_WAVE(NOW,WHS,WDIR,WPER,WLENGTH,WPER_BOT,WUB_BOT)
