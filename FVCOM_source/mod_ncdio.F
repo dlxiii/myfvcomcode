@@ -7878,6 +7878,14 @@ CONTAINS
        IF (STATUS /=0 ) CALL FATAL_ERROR("COULD NOT ALLOCATE MEMORY ON IO PROC FOR OUTPUT DATA:EL")
        DYE = 0.0_SP
 
+# if defined (DYE_AGE_ACTIVE)
+! YULONG WANG 20200625==>
+       allocate(DYE_AGE(MGL,KB),stat=status)
+       IF (STATUS /=0 ) CALL FATAL_ERROR("COULD NOT ALLOCATE MEMORY ON IO PROC FOR OUTPUT DATA:EL")
+       DYE_AGE = 0.0_SP
+# endif
+! YULONG WANG 20200625<==
+
     END IF
 
     ! ALLOCATE THE NEW FILE OBJECT
@@ -7888,16 +7896,16 @@ CONTAINS
     VAR  => NC_MAKE_AVAR(name='DYE',&
          & values=DYE, DIM1= DIM_node, DIM2= DIM_siglay, DIM3=DIM_time)
 
-    ATT  => NC_MAKE_ATT(name='long_name',values='Water Surface Elevation') 
+    ATT  => NC_MAKE_ATT(name='long_name',values='Passive tracer concentration') 
     VAR  => ADD(VAR,ATT)
 
-    ATT  => NC_MAKE_ATT(name='units',values='meters') 
+    ATT  => NC_MAKE_ATT(name='units',values='(-)') 
     VAR  => ADD(VAR,ATT)
 
     ATT  => NC_MAKE_ATT(name='positive',values='up') 
     VAR  => ADD(VAR,ATT)
 
-    ATT  => NC_MAKE_ATT(name='standard_name',values='sea_surface_height_above_geoid') 
+    ATT  => NC_MAKE_ATT(name='standard_name',values='passive tracer concentration') 
     VAR  => ADD(VAR,ATT)
 
 # if defined(UCF)
@@ -7922,6 +7930,47 @@ CONTAINS
 
     NCF  => ADD(NCF,VAR)
 
+# if defined (DYE_AGE_ACTIVE)
+! YULONG WANG 20200625==>
+    ! Dye_AGE
+    VAR  => NC_MAKE_AVAR(name='DYE_AGE',&
+         & values=DYE_AGE, DIM1= DIM_node, DIM2= DIM_siglay, DIM3=DIM_time)
+
+    ATT  => NC_MAKE_ATT(name='long_name',values='Passive tracer concentration age') 
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='units',values='(sec)') 
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='positive',values='up') 
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='standard_name',values='passive tracer concentration age') 
+    VAR  => ADD(VAR,ATT)
+
+# if defined(UCF)
+    ATT  => NC_MAKE_ATT(name='grid',values='grid4') 
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='coordinates',values="lat lon") 
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='grid_location',values='node') 
+    VAR  => ADD(VAR,ATT)
+# else
+    ATT  => NC_MAKE_ATT(name='grid',values='SigmaLayer_Mesh') 
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='coordinates',values=CoordVar) 
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='type',values='data') 
+    VAR  => ADD(VAR,ATT)
+# endif
+
+    NCF  => ADD(NCF,VAR)
+# endif
+! YULONG WANG 20200625<==   
 
     IF(DBG_SET(DBG_SBR)) WRITE(IPT,*) "END DYE_FILE_OBJECT"
 

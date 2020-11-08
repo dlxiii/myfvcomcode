@@ -59,9 +59,24 @@ MODULE MOD_DYE
      REAL(SP), ALLOCATABLE :: DYEF(:,:)      !!DYE CONCENTRATION FROM PREVIOUS TIME
 !     REAL(SP), ALLOCATABLE :: DYEMEAN(:,:)   !!MEAN INITIAL DYE - not used!
 
+# if defined (DYE_AGE_ACTIVE)
+! YULONG WANG 20200625==>
+!--VARIABLES OF DYE_AGE     
+     REAL(SP), ALLOCATABLE, TARGET :: DYE_AGE(:,:) !!DYE CONCENTRATION AT NODE
+     REAL(SP), ALLOCATABLE :: DYEF_AGE(:,:)        !!DYE CONCENTRATION FROM PREVIOUS TIME
+# endif
+! YULONG WANG 20200625<==
+
 #  if defined (MPDATA)
      REAL(SP), ALLOCATABLE :: DYE_S(:,:)    !! temporary dye in modified upwind
      REAL(SP), ALLOCATABLE :: DYE_SF(:,:)    !! temporary dye in modified upwind
+
+# if defined (DYE_AGE_ACTIVE)
+! YULONG WANG 20200625==>
+     REAL(SP), ALLOCATABLE :: DYE_S_AGE(:,:)       !! temporary dye in modified upwind
+     REAL(SP), ALLOCATABLE :: DYE_SF_AGE(:,:)      !! temporary dye in modified upwind
+# endif
+! YULONG WANG 20200625<==
 
      REAL(SP), ALLOCATABLE :: WWWS(:,:)    !! temporary dye in modified upwind
      REAL(SP), ALLOCATABLE :: WWWSF(:,:)    !! temporary dye in modified upwind
@@ -77,17 +92,17 @@ MODULE MOD_DYE
           & DYE_ON,                 &
           & DYE_RELEASE_START,      &
           & DYE_RELEASE_STOP,       &
-	  & KSPE_DYE,               &
-	  & MSPE_DYE,               &
-	  & K_SPECIFY,              &
-	  & M_SPECIFY,              &
-	  & DYE_SOURCE_TERM
+	       & KSPE_DYE,               &
+	       & MSPE_DYE,               &
+	       & K_SPECIFY,              &
+	       & M_SPECIFY,              &
+	       & DYE_SOURCE_TERM
 
     integer itera,ntera
      real ssss
    CONTAINS !------------------------------------------------------------------!
             ! ALLOC_VARS_DYE  : Allocate and Initialize Arrays of dye          !
-            ! NAME_LIST_READ_DYE : specify dye soerce term and parameter      !
+            ! NAME_LIST_READ_DYE : specify dye soerce term and parameter       !
             ! ADV_DYE       : Horizontal Advection/Diffusion of dye Variables  !
             ! VDIF_DYE      : Vertical Diffusion of dye Variables              !
             ! INITIAL_DYE   : Initialize for dye Variables - not used!         !
@@ -118,6 +133,14 @@ MODULE MOD_DYE
 !==============================================================================!
    ALLOCATE(DYE(0:MT,KB))           ;DYE    = ZERO
    ALLOCATE(DYEF(0:MT,KB))          ;DYEF    = ZERO
+
+# if defined (DYE_AGE_ACTIVE)
+! YULONG WANG 20200625==>
+   ALLOCATE(DYE_AGE(0:MT,KB))           ;DYE_AGE      = ZERO
+   ALLOCATE(DYEF_AGE(0:MT,KB))          ;DYEF_AGE     = ZERO
+# endif
+! YULONG WANG 20200625<==  
+
 !   ALLOCATE(DYEMEAN(0:MT,KB))       ;DYEMEAN    = ZERO
 !   ALLOCATE(DYE_S(0:MT,KB))          ;DYE_S    = ZERO
 !   ALLOCATE(DYE_SF(0:MT,KB))          ;DYE_SF    = ZERO
@@ -1535,7 +1558,726 @@ MODULE MOD_DYE
      
    RETURN
    END SUBROUTINE NAME_LIST_PRINT_DYE
-!==============================================================================!   
+!==============================================================================!  
+   
+# if defined (DYE_AGE_ACTIVE)
+! YULONG WANG 20200625==>
+
+      !==============================================================================|
+      !   Calculate Advection and Horizontal Diffusion Terms for DYE_AGE             |
+      !==============================================================================|
+
+   SUBROUTINE ADV_DYE_AGE
+
+      USE ALL_VARS
+      USE MOD_UTILS
+      USE BCS
+      USE MOD_OBCS
+      USE MOD_PAR
+      USE MOD_WD
+      USE MOD_SPHERICAL
+      USE MOD_NORTHPOLE
+#  if defined (SEMI_IMPLICIT)
+      USE MOD_SEMI_IMPLICIT
+#  endif
+
+      IMPLICIT NONE
+      REAL(SP), DIMENSION(0:MT,KB)     :: XFLUX_AGE,XFLUX_ADV_AGE
+      REAL(SP), DIMENSION(M)           :: PDYEPX_AGE,PDYEPY_AGE,PDYEPXD_AGE,PDYEPYD_AGE
+      REAL(SP), DIMENSION(M)           :: VISCOFF
+      REAL(SP), DIMENSION(3*(NT),KBM1) :: DTIJ 
+      REAL(SP), DIMENSION(3*(NT),KBM1) :: UVN
+      REAL(SP)                         :: FFD_AGE,FF1_AGE
+      REAL(SP)                         :: UTMP,VTMP,SITAI
+      REAL(SP)                         :: DXA,DYA,DXB,DYB,FIJ1,FIJ2,UN
+      REAL(SP)                         :: TXX_AGE,TYY_AGE,FXX_AGE,FYY_AGE,VISCOF,EXFLUX_AGE,TEMP,STPOINT
+      REAL(SP)                         :: FACT,FM1
+      REAL(SP)                         :: s1min, s1max, s2min, s2max,SMIN,SMAX,xxxx
+      INTEGER                          :: I,I1,I2,IA,IB,J,J1,J2,K,JTMP,JJ,KK,IP,II
+
+#  if defined (WET_DRY)
+      INTEGER                          :: N_NTVE
+#  endif
+#  if defined (SEMI_IMPLICIT)
+      REAL(SP)                         :: UN1
+      REAL(SP), DIMENSION(3*(NT),KBM1) :: UVN1
+      REAL(SP), DIMENSION(3*(NT),KBM1) :: DTIJ1
+#  endif
+
+      IF(DBG_SET(DBG_SBR)) WRITE(IPT,*)"Start: adv_dye_age"
+      !------------------------------------------------------------------------------!
+
+      SELECT CASE(HORIZONTAL_MIXING_TYPE)
+         CASE ('closure')
+            FACT = 1.0_SP
+            FM1  = 0.0_SP
+         CASE('constant')
+            FACT = 0.0_SP
+            FM1  = 1.0_SP
+         CASE DEFAULT
+            CALL FATAL_ERROR("UNKNOW HORIZONTAL MIXING TYPE:",&
+               & TRIM(HORIZONTAL_MIXING_TYPE) )
+         END SELECT
+      !
+      !--Initialize Fluxes and DYEF_AGE----------------------------------------------------------!
+      !
+      XFLUX_AGE     = 0.0_SP
+      XFLUX_ADV_AGE = 0.0_SP
+      DYEF_AGE      = 0.0_SP
+      !
+      !--Loop Over Control Volume Sub-Edges And Calculate Normal Velocity------------!
+      !
+      DO I=1,NCV
+         I1=NTRG(I)
+         DO K=1,KBM1
+            DTIJ(I,K)=DT1(I1)*DZ1(I1,K)
+            UVN(I,K) = V(I1,K)*DLTXE(I) - U(I1,K)*DLTYE(I)
+#  if defined (SEMI_IMPLICIT)
+            DTIJ1(I,K) = D1(I1)*DZ1(I1,K)
+            UVN1(I,K) = VF(I1,K)*DLTXE(I) - UF(I1,K)*DLTYE(I)
+#  endif
+         END DO
+      END DO
+      !
+      !--Calculate the Advection and Horizontal Diffusion Terms----------------------!
+      !
+      DO K=1,KBM1
+         PDYEPX_AGE  = 0.0_SP 
+         PDYEPY_AGE  = 0.0_SP 
+         PDYEPXD_AGE = 0.0_SP 
+         PDYEPYD_AGE = 0.0_SP
+         DO I=1,M
+            DO J=1,NTSN(I)-1
+               I1=NBSN(I,J)
+               I2=NBSN(I,J+1)
+#  if defined (WET_DRY)
+               IF(ISWETN(I1) == 0 .AND. ISWETN(I2) == 1)THEN
+                  FFD_AGE=0.5_SP*(DYE_AGE(I,K)+DYE_AGE(I2,K))
+                  FF1_AGE=0.5_SP*(DYE_AGE(I,K)+DYE_AGE(I2,K))
+               ELSE IF(ISWETN(I1) == 1 .AND. ISWETN(I2) == 0)THEN
+                  FFD_AGE=0.5_SP*(DYE_AGE(I1,K)+DYE_AGE(I,K))
+                  FF1_AGE=0.5_SP*(DYE_AGE(I1,K)+DYE_AGE(I,K))
+               ELSE IF(ISWETN(I1) == 0 .AND. ISWETN(I2) == 0)THEN
+                  FFD_AGE=0.5_SP*(DYE_AGE(I,K)+DYE_AGE(I,K))
+                  FF1_AGE=0.5_SP*(DYE_AGE(I,K)+DYE_AGE(I,K))
+               ELSE
+                  FFD_AGE=0.5_SP*(DYE_AGE(I1,K)+DYE_AGE(I2,K))
+                  FF1_AGE=0.5_SP*(DYE_AGE(I1,K)+DYE_AGE(I2,K))
+               END IF 
+#  else
+               FFD_AGE=0.5_SP*(DYE_AGE(I1,K)+DYE_AGE(I2,K))
+               FF1_AGE=0.5_SP*(DYE_AGE(I1,K)+DYE_AGE(I2,K))
+#  endif
+               PDYEPX_AGE(I)=PDYEPX_AGE(I)+FF1_AGE*DLTYTRIE(i,j)
+               PDYEPY_AGE(I)=PDYEPY_AGE(I)+FF1_AGE*DLTXTRIE(i,j)
+               PDYEPXD_AGE(I)=PDYEPXD_AGE(I)+FFD_AGE*DLTYTRIE(i,j)
+               PDYEPYD_AGE(I)=PDYEPYD_AGE(I)+FFD_AGE*DLTXTRIE(i,j)
+            END DO
+            PDYEPX_AGE(I)=PDYEPX_AGE(I)/ART2(I)
+            PDYEPY_AGE(I)=PDYEPY_AGE(I)/ART2(I)
+            PDYEPXD_AGE(I)=PDYEPXD_AGE(I)/ART2(I)
+            PDYEPYD_AGE(I)=PDYEPYD_AGE(I)/ART2(I)
+         END DO 
+
+         IF(K == KBM1)THEN
+            DO I=1,M
+               PFPXB_AGE(I) = PDYEPX_AGE(I)
+               PFPYB_AGE(I) = PDYEPY_AGE(I)
+            END DO
+         END IF
+
+         DO I=1,M
+            VISCOFF(I)=VISCOFH(I,K)
+         END DO
+
+         IF(K == KBM1) THEN
+            AH_BOTTOM(1:M) = (FACT*VISCOFF(1:M) + FM1)*NN_HVC(1:M)
+         END IF
+
+         DO I=1,NCV_I
+            IA=NIEC(I,1)
+            IB=NIEC(I,2)
+            FIJ1=DYE_AGE(IA,K)+DLTXNCVE(I,1)*PDYEPX_AGE(IA)+DLTYNCVE(I,1)*PDYEPY_AGE(IA)
+            FIJ2=DYE_AGE(IB,K)+DLTXNCVE(I,2)*PDYEPX_AGE(IB)+DLTYNCVE(I,2)*PDYEPY_AGE(IB)
+
+            S1MIN=MINVAL(DYE_AGE(NBSN(IA,1:NTSN(IA)-1),K))
+            S1MIN=MIN(S1MIN, DYE_AGE(IA,K))
+            S1MAX=MAXVAL(DYE_AGE(NBSN(IA,1:NTSN(IA)-1),K))
+            S1MAX=MAX(S1MAX, DYE_AGE(IA,K))
+            S2MIN=MINVAL(DYE_AGE(NBSN(IB,1:NTSN(IB)-1),K))
+            S2MIN=MIN(S2MIN, DYE_AGE(IB,K))
+            S2MAX=MAXVAL(DYE_AGE(NBSN(IB,1:NTSN(IB)-1),K))
+            S2MAX=MAX(S2MAX, DYE_AGE(IB,K))
+            IF(FIJ1 < S1MIN) FIJ1=S1MIN
+            IF(FIJ1 > S1MAX) FIJ1=S1MAX
+            IF(FIJ2 < S2MIN) FIJ2=S2MIN
+            IF(FIJ2 > S2MAX) FIJ2=S2MAX
+
+            UN=UVN(I,K)
+#  if defined (SEMI_IMPLICIT)
+            UN1=UVN1(I,K)
+#  endif
+
+            VISCOF=(FACT*0.5_SP*(VISCOFF(IA)*NN_HVC(IA)+VISCOFF(IB)*NN_HVC(IB)) +  &
+               FM1*0.5_SP*(NN_HVC(IA)+NN_HVC(IB)))
+
+            TXX_AGE=0.5_SP*(PDYEPXD_AGE(IA)+PDYEPXD_AGE(IB))*VISCOF
+            TYY_AGE=0.5_SP*(PDYEPYD_AGE(IA)+PDYEPYD_AGE(IB))*VISCOF
+
+            FXX_AGE=-DTIJ(I,K)*TXX_AGE*DLTYE(I)
+            FXX_AGE= DTIJ(I,K)*TYY_AGE*DLTXE(I)
+
+#  if !defined (SEMI_IMPLICIT)
+            EXFLUX_AGE=-UN*DTIJ(I,K)* &
+               ((1.0_SP+SIGN(1.0_SP,UN))*FIJ2+(1.0_SP-SIGN(1.0_SP,UN))*FIJ1)*0.5_SP+FXX_AGE+FXX_AGE
+#  else
+            EXFLUX_AGE=-UN*DTIJ(I,K)* &
+               ((1.0_SP+SIGN(1.0_SP,UN))*FIJ2+(1.0_SP-SIGN(1.0_SP,UN))*FIJ1)*0.5_SP
+            EXFLUX_AGE=(1.0_SP-IFCETA)*EXFLUX_AGE+IFCETA*(-UN1*DTIJ1(I,K)*  &
+               ((1.0_SP+SIGN(1.0_SP,UN1))*FIJ2+(1.0_SP-SIGN(1.0_SP,UN1))*FIJ1)*0.5_SP)+FXX_AGE+FXX_AGE
+#  endif
+
+            XFLUX_AGE(IA,K)=XFLUX_AGE(IA,K)+EXFLUX_AGE
+            XFLUX_AGE(IB,K)=XFLUX_AGE(IB,K)-EXFLUX_AGE
+
+            XFLUX_ADV_AGE(IA,K)=XFLUX_ADV_AGE(IA,K)+(EXFLUX_AGE-FXX_AGE-FXX_AGE)
+            XFLUX_ADV_AGE(IB,K)=XFLUX_ADV_AGE(IB,K)-(EXFLUX_AGE-FXX_AGE-FXX_AGE)
+         END DO
+
+#  if defined (SPHERICAL)
+#  if !defined (SEMI_IMPLICIT)
+         ! CALL ADV_DYE_XY(XFLUX_AGE,XFLUX_ADV_AGE,PDYEPX,PDYEPY,PDYEPXD,PDYEPYD,VISCOFF,K,0.0_SP)
+#  else
+         ! CALL ADV_DYE_XY(XFLUX_AGE,XFLUX_ADV_AGE,PDYEPX,PDYEPY,PDYEPXD,PDYEPYD,VISCOFF,K,IFCETA)
+#  endif
+#  endif  
+      END DO !!SIGMA LOOP
+      !
+      !-Accumulate Fluxes at Boundary Nodes
+      !
+#  if defined (MULTIPROCESSOR)
+      IF(PAR)CALL NODE_MATCH(0,NBN,BN_MLT,BN_LOC,BNC,MT,KB,MYID,NPROCS,XFLUX_AGE,XFLUX_ADV_AGE)
+#  endif
+
+      DO K=1,KBM1
+         IF(IOBCN > 0) THEN
+            DO I=1,IOBCN
+               I1=I_OBC_N(I)
+               XFLUX_OBC(I,K)=XFLUX_ADV_AGE(I1,K)
+            END DO
+         END IF
+      ENDDO
+
+#  if defined (MPDATA)
+      ! Songhu {
+      ! Using smolarkiewicz, P. K; A fully multidimensional positive definite advection
+      ! transport algorithm with small implicit diffusion, Journal of Computational
+      ! Physics, 54, 325-362, 1984     
+      ! The horizontal term of advection is neglected here
+
+      DO K=1,KBM1
+         DO I=1,M
+            IF(ISONB(I) == 2) THEN
+               XFLUX_AGE(I,K)=0.
+            ENDIF
+         ENDDO
+      ENDDO
+
+      ! Initialize variables of MPDATA
+      DYE_S_AGE=0._SP
+      DYE_SF_AGE=0._SP
+      WWWS=0._SP
+      WWWSF=0._SP
+      DTWWWS=0._SP
+      ZZZFLUX=0._SP
+      BETA=0._SP
+      BETAIN=0._SP
+      BETAOUT=0._SP
+
+      ! first loop for vertical upwind
+      ! flux including horizontal and vertical upwind
+      DO K=1,KBM1
+         DO I=1,M
+#  if defined (WET_DRY)
+            IF(ISWETN(I)*ISWETNT(I) == 1) THEN
+#  endif
+            IF(K == 1) THEN
+               TEMP = -(WTS(I,K+1)-ABS(WTS(I,K+1)))*DYE_AGE(I,K)   &
+                  -(WTS(I,K+1)+ABS(WTS(I,K+1)))*DYE_AGE(I,K+1) &
+                  +(WTS(I,K)+ABS(WTS(I,K)))*DYE_AGE(I,K)    
+            ELSE IF(K == KBM1) THEN
+               TEMP =  +(WTS(I,K)-ABS(WTS(I,K)))*DYE_AGE(I,K-1)     &
+                  +(WTS(I,K)+ABS(WTS(I,K)))*DYE_AGE(I,K)
+            ELSE
+               TEMP = -(WTS(I,K+1)-ABS(WTS(I,K+1)))*DYE_AGE(I,K)   &
+                  -(WTS(I,K+1)+ABS(WTS(I,K+1)))*DYE_AGE(I,K+1) &
+                  +(WTS(I,K)-ABS(WTS(I,K)))*DYE_AGE(I,K-1)     &
+                  +(WTS(I,K)+ABS(WTS(I,K)))*DYE_AGE(I,K)
+            END IF
+            TEMP = 0.5_SP*TEMP 
+
+            IF(K == 1)THEN
+               SMAX = MAXVAL(DYE_AGE(NBSN(I,1:NTSN(I)),K))
+               SMIN = MINVAL(DYE_AGE(NBSN(I,1:NTSN(I)),K))
+               SMAX = MAX(SMAX,DYE_AGE(I,K+1),DYE_AGE(I,K))
+               SMIN = MIN(SMIN,DYE_AGE(I,K+1),DYE_AGE(I,K))
+            ELSE IF(K == KBM1)THEN
+               SMAX = MAXVAL(DYE_AGE(NBSN(I,1:NTSN(I)),K))
+               SMIN = MINVAL(DYE_AGE(NBSN(I,1:NTSN(I)),K))
+               SMAX = MAX(SMAX,DYE_AGE(I,K-1),DYE_AGE(I,K))
+               SMIN = MIN(SMIN,DYE_AGE(I,K-1),DYE_AGE(I,K))
+            ELSE
+               SMAX = MAXVAL(DYE_AGE(NBSN(I,1:NTSN(I)),K))
+               SMIN = MINVAL(DYE_AGE(NBSN(I,1:NTSN(I)),K))
+               SMAX = MAX(SMAX,DYE_AGE(I,K+1),DYE_AGE(I,K-1),DYE_AGE(I,K))
+               SMIN = MIN(SMIN,DYE_AGE(I,K+1),DYE_AGE(I,K-1),DYE_AGE(I,K))
+            END IF
+
+            ZZZFLUX(I,K)= TEMP*(DTI/DT(I))/DZ(I,K) + XFLUX_AGE(I,K)/ART1(I)*(DTI/DT(I))/DZ(I,K) 
+            XXXX= ZZZFLUX(I,K)*DT(I)/DTFA(I)+DYE_AGE(I,K)-DYE_AGE(I,K)*DT(I)/DTFA(I) 
+
+            BETA(I,K)=0.5*(1.-SIGN(1.,XXXX)) * (SMAX-DYE_AGE(I,K))/(ABS(XXXX)+1.E-10) &
+               +0.5*(1.-SIGN(1.,-XXXX)) * (DYE_AGE(I,K)-SMIN)/(ABS(XXXX)+1.E-10)
+
+            DYE_SF_AGE(I,K)=DYE_AGE(I,K)-MIN(1.,BETA(I,K))*XXXX
+
+#  if defined (WET_DRY)
+            END IF
+#  endif
+         END DO
+      END DO  !! SIGMA LOOP
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      NTERA = 4
+      DO ITERA=1,NTERA   !! Smolaricizw Loop 
+         IF(ITERA == 1)THEN
+            WWWSF = WTS
+            DYE_S_AGE =DYE_SF_AGE
+            DTWWWS = DT
+         ELSE
+            WWWSF = WWWS
+            DYE_S_AGE =DYE_SF_AGE
+            DTWWWS = DTFA
+         END IF
+         DO K=2,KBM1
+            DO I=1,M
+               TEMP=ABS(WWWSF(I,K))-DTI*(WWWSF(I,K))*(WWWSF(I,K))/DZ(I,K)/DTWWWS(I)
+               WWWS(I,K)=TEMP*(DYE_S_AGE(I,K-1)-DYE_S_AGE(I,K))/(ABS(DYE_S_AGE(I,K-1))+ &
+                  ABS(DYE_S_AGE(I,K))+1.E-14)
+
+               IF(TEMP < 0.0_SP .OR. DYE_S_AGE(I,K) == 0.0_SP)THEN 
+                  WWWS(I,K)=0.0_SP 
+               END IF
+            END DO
+         END DO
+         DO I=1,M
+            WWWS(I,1)=0.0_SP
+         END DO
+
+         DO I=1,M
+            SMAX = MAXVAL(DYE_AGE(NBSN(I,1:NTSN(I)),1))
+            SMIN = MINVAL(DYE_AGE(NBSN(I,1:NTSN(I)),1))
+            SMAX = MAX(SMAX,DYE_AGE(I,2),DYE_AGE(I,1))
+            SMIN = MIN(SMIN,DYE_AGE(I,2),DYE_AGE(I,1))
+ 
+            TEMP=0.5*((WWWS(I,2)+ABS(WWWS(I,2)))*DYE_S_AGE(I,2))*(DTI/DTFA(I))/DZ(I,1)
+            BETAIN(I,1)=(SMAX-DYE_S_AGE(I,1))/(TEMP+1.E-10)
+
+            TEMP=0.5*((WWWS(I,1)+ABS(WWWS(I,1)))*DYE_S_AGE(I,1)- &
+               (WWWS(I,2)-ABS(WWWS(I,2)))*DYE_S_AGE(I,1))*(DTI/DTFA(I))/DZ(I,1)
+            BETAOUT(I,1)=(DYE_S_AGE(I,1)-SMIN)/(TEMP+1.E-10)
+
+            WWWSF(I,1)=0.5*MIN(1.,BETAOUT(I,1))*(WWWS(I,1)+ABS(WWWS(I,1))) + &
+               0.5*MIN(1.,BETAIN(I,1))*(WWWS(I,1)-ABS(WWWS(I,1)))
+         END DO
+
+         DO K=2,KBM1-1
+            DO I=1,M
+               SMAX = MAXVAL(DYE_AGE(NBSN(I,1:NTSN(I)),K))
+               SMIN = MINVAL(DYE_AGE(NBSN(I,1:NTSN(I)),K))
+               SMAX = MAX(SMAX,DYE_AGE(I,K+1),DYE_AGE(I,K-1),DYE_AGE(I,K))
+               SMIN = MIN(SMIN,DYE_AGE(I,K+1),DYE_AGE(I,K-1),DYE_AGE(I,K))
+ 
+               TEMP=0.5*((WWWS(I,K+1)+ABS(WWWS(I,K+1)))*DYE_S_AGE(I,K+1)-   &
+                  (WWWS(I,K)-ABS(WWWS(I,K)))*DYE_S_AGE(I,K-1))*(DTI/DTFA(I))/DZ(I,K)
+               BETAIN(I,K)=(SMAX-DYE_S_AGE(I,K))/(TEMP+1.E-10)
+
+               TEMP=0.5*((WWWS(I,K)+ABS(WWWS(I,K)))*DYE_S_AGE(I,K)-  &
+                 (WWWS(I,K+1)-ABS(WWWS(I,K+1)))*DYE_S_AGE(I,K))*(DTI/DTFA(I))/DZ(I,K)
+               BETAOUT(I,K)=(DYE_S_AGE(I,K)-SMIN)/(TEMP+1.E-10)
+
+               WWWSF(I,K)=0.5*MIN(1.,BETAIN(I,K-1),BETAOUT(I,K))*(WWWS(I,K)+ABS(WWWS(I,K))) + &
+                  0.5*MIN(1.,BETAIN(I,K),BETAOUT(I,K-1))*(WWWS(I,K)-ABS(WWWS(I,K)))
+            END DO
+         END DO
+     
+         K=KBM1
+            DO I=1,M
+               SMAX = MAXVAL(DYE_AGE(NBSN(I,1:NTSN(I)),K))
+               SMIN = MINVAL(DYE_AGE(NBSN(I,1:NTSN(I)),K))
+               SMAX = MAX(SMAX,DYE_AGE(I,K-1),DYE_AGE(I,K))
+               SMIN = MIN(SMIN,DYE_AGE(I,K-1),DYE_AGE(I,K))
+ 
+               TEMP=0.5*((WWWS(I,K+1)+ABS(WWWS(I,K+1)))*DYE_S_AGE(I,K+1)-   &
+                  (WWWS(I,K)-ABS(WWWS(I,K)))*DYE_S_AGE(I,K-1))*(DTI/DTFA(I))/DZ(I,K)
+               BETAIN(I,K)=(SMAX-DYE_S_AGE(I,K))/(TEMP+1.E-10)
+
+               TEMP=0.5*((WWWS(I,K)+ABS(WWWS(I,K)))*DYE_S_AGE(I,K)-         &
+                  (WWWS(I,K+1)-ABS(WWWS(I,K+1)))*DYE_S_AGE(I,K))*(DTI/DTFA(I))/DZ(I,K)
+               BETAOUT(I,K)=(DYE_S_AGE(I,K)-SMIN)/(TEMP+1.E-10)
+
+               WWWSF(I,K)=0.5*MIN(1.,BETAIN(I,K-1),BETAOUT(I,K))*(WWWS(I,K)+ABS(WWWS(I,K))) + &
+                  0.5*MIN(1.,BETAIN(I,K),BETAOUT(I,K-1))*(WWWS(I,K)-ABS(WWWS(I,K)))
+            END DO
+            WWWS=WWWSF 
+
+            DO K=1,KBM1
+               DO I=1,M
+#  if defined (WET_DRY)
+                  IF(ISWETN(I)*ISWETNT(I) == 1) THEN
+#  endif
+                  IF(K == 1) THEN
+                     TEMP = -(WWWS(I,K+1)-ABS(WWWS(I,K+1)))*DYE_S_AGE(I,K)   &
+                        -(WWWS(I,K+1)+ABS(WWWS(I,K+1)))*DYE_S_AGE(I,K+1) &
+                        +(WWWS(I,K)+ABS(WWWS(I,K)))*DYE_S_AGE(I,K)
+                  ELSE IF(K == KBM1) THEN
+                     TEMP =  +(WWWS(I,K)-ABS(WWWS(I,K)))*DYE_S_AGE(I,K-1)     &
+                        +(WWWS(I,K)+ABS(WWWS(I,K)))*DYE_S_AGE(I,K)
+                  ELSE
+                     TEMP = -(WWWS(I,K+1)-ABS(WWWS(I,K+1)))*DYE_S_AGE(I,K)   &
+                        -(WWWS(I,K+1)+ABS(WWWS(I,K+1)))*DYE_S_AGE(I,K+1) &
+                        +(WWWS(I,K)-ABS(WWWS(I,K)))*DYE_S_AGE(I,K-1)     &
+                        +(WWWS(I,K)+ABS(WWWS(I,K)))*DYE_S_AGE(I,K)
+                  END IF
+                  TEMP = 0.5_SP*TEMP
+                  DYE_SF_AGE(I,K)=(   DYE_S_AGE(I,K)-TEMP*(DTI/DTFA(I))/DZ(I,K)   ) 
+#  if defined (WET_DRY)
+                  END IF
+#  endif
+               END DO
+            END DO  !! SIGMA LOOP
+         END DO  !! Smolarvizw Loop
+
+         !--------------------------------------------------------------------------
+         ! End of smolarkiewicz upwind loop
+         !--------------------------------------------------------------------------
+#  endif
+
+#  if ! defined(MPDATA)
+
+         DO I=1,M
+#  if defined (WET_DRY)
+            IF(ISWETN(I)*ISWETNT(I) == 1) THEN
+#  endif
+         
+            DO K=1, KBM1
+               IF(K == 1) THEN
+                  TEMP=-WTS(I,K+1)*(DYE_AGE(I,K)*DZ(I,K+1)+DYE_AGE(I,K+1)*DZ(I,K))/  &
+                     (DZ(I,K)+DZ(I,K+1))
+               ELSE IF(K == KBM1) THEN
+                  TEMP= WTS(I,K)*(DYE_AGE(I,K)*DZ(I,K-1)+DYE_AGE(I,K-1)*DZ(I,K))/    &
+                     (DZ(I,K)+DZ(I,K-1))
+               ELSE
+                  TEMP= WTS(I,K)*(DYE_AGE(I,K)*DZ(I,K-1)+DYE_AGE(I,K-1)*DZ(I,K))/    &
+                     (DZ(I,K)+DZ(I,K-1))-&
+                     WTS(I,K+1)*(DYE_AGE(I,K)*DZ(I,K+1)+DYE_AGE(I,K+1)*DZ(I,K))/  &
+                     (DZ(I,K)+DZ(I,K+1))
+               END IF
+         
+               IF(ISONB(I) == 2) THEN
+                  XFLUX_AGE(I,K)=TEMP*ART1(I)
+               ELSE
+                  XFLUX_AGE(I,K)=XFLUX_AGE(I,K)+TEMP*ART1(I)
+               END IF
+            END DO
+
+#  if defined (WET_DRY)
+            END IF
+#  endif
+         END DO  !! SIGMA LOOP
+
+#  endif
+         ! NOT MPDATA
+         !
+         !--Update DYE_AGE-------------------------------------------------------------!
+         !
+#  if defined (WET_DRY)
+         DO I=1,M
+            IF(ISWETN(I)*ISWETNT(I) == 1 )THEN
+               DO K=1,KBM1
+#  if defined (MPDATA)
+                  DYEF_AGE(I,K)=DYE_SF_AGE(I,K)+DYE_AGE(I,K)
+#  else     
+#  if !defined (SEMI_IMPLICIT)
+                  DYEF_AGE(I,K)=(DYE_AGE(I,K)-XFLUX_AGE(I,K)/ART1(I)*(DTI/(DT(I)*DZ(I,K))))*(DT(I)/DTFA(I))+DYE_AGE(I,K)
+                  ! TF1(I,K)=(T1(I,K)-XFLUX_AGE(I,K)/ART1(I)*(DTI/(DT(I)*DZ(I,K))))*(DT(I)/DTFA(I))
+#  else
+                  DYEF_AGE(I,K)=(DYE_AGE(I,K)-XFLUX_AGE(I,K)/ART1(I)*(DTI/(DT(I)*DZ(I,K))))*(DT(I)/DTFA(I))+DYE_AGE(I,K)
+#  endif         
+#  endif 
+                  !(MPDATA)
+               END DO
+            ELSE  
+               DO K=1,KBM1
+#  if !defined (SEMI_IMPLICIT)
+                  DYEF_AGE(I,K)=DYE_AGE(I,K)+DYE_AGE(I,K)
+#  else
+                  DYEF_AGE(I,K)=DYE_AGE(I,K)+DYE_AGE(I,K)
+#  endif
+               END DO
+            END IF
+         END DO
+#  else  
+         !NOT WET DRY
+         DO I=1,M
+            DO K=1,KBM1
+#  if !defined (MPDATA)     
+#  if !defined (SEMI_IMPLICIT)
+               DYEF_AGE(I,K)=(DYE_AGE(I,K)-XFLUX_AGE(I,K)/ART1(I)*(DTI/(DT(I)*DZ(I,K))))*(DT(I)/DTFA(I))+DYE_AGE(I,K)
+#  else
+               DYEF_AGE(I,K)=(DYE_AGE(I,K)-XFLUX_AGE(I,K)/ART1(I)*(DTI/(DT(I)*DZ(I,K))))*(DT(I)/DTFA(I))+DYE_AGE(I,K)
+#  endif
+#  else
+               DYEF_AGE(I,K)=DYE_AGE(I,K)+DYE_AGE(I,K)
+#  endif              
+            END DO
+         END DO
+#  endif
+      IF(DBG_SET(DBG_SBR)) WRITE(IPT,*)"End: adv_dye_age"
+
+      RETURN
+   END SUBROUTINE ADV_DYE_AGE
+
+!==============================================================================|
+!     this subroutine is used to calculate the DYE_AGE                             !
+!     by including vertical diffusion implicitly.                              !
+!==============================================================================|
+
+   SUBROUTINE VDIF_DYE_AGE(F_AGE)                
+
+!------------------------------------------------------------------------------|
+
+      USE ALL_VARS
+      USE MOD_UTILS
+      USE BCS
+      # if defined (WET_DRY)
+      USE MOD_WD
+      # endif
+      IMPLICIT NONE
+      INTEGER :: I,K,J,KI,KK
+      REAL(DP) :: TMP,TMP1,TMP2,TMP3,QTMP,GW,ZDEP,FKH,UMOLPR
+      REAL(SP), DIMENSION(0:MT,KB)  :: F_AGE
+      REAL(DP), DIMENSION(M,KB)     :: FF_AGE,AF,CF,VHF_AGE,VHPF_AGE,RAD
+      REAL(DP), DIMENSION(M)        :: KHBOTTOM,WFSURF,SWRADF
+
+      IF(DBG_SET(DBG_SBR)) WRITE(IPT,*)"Start: vdif_dye_age:"
+
+      UMOLPR = UMOL*1.E0_SP
+
+      !------------------------------------------------------------------------------!
+      !                                                                              !
+      !        the following section solves the equation                             !
+      !         dti*(kh*F_AGE')'-F_AGE=-fb                                                   !
+      !                                                                              !
+      !------------------------------------------------------------------------------!
+
+
+      DO K = 2, KBM1
+         DO I = 1, M
+            IF(ISWETN(I) == 1)THEN
+               FKH = KH(I,K)
+               IF(K == KBM1) THEN
+                  KHBOTTOM(I)=FKH
+               END IF
+               AF(I,K-1)=-DTI*(FKH+UMOLPR)/(DZ(I,K-1)*DZZ(I,K-1)*D(I)*D(I))
+               CF(I,K)=-DTI*(FKH+UMOLPR)/(DZ(I,K)*DZZ(I,K-1)*D(I)*D(I))
+            END IF
+         END DO
+      END DO
+
+      !------------------------------------------------------------------------------!
+      !     the net heat flux input.                                                 !
+      !     the method shown below can be used when we turn off the                  !
+      !     body force in subroutine advt. be sure this method could                 !
+      !     cause the surface overheated if the vertical resolution                  !
+      !     is not high enough.                                                      !
+      !------------------------------------------------------------------------------!
+
+      SWRADF = 0.0_SP
+      WFSURF = 0.0_SP
+      RAD    = 0.0_SP
+
+      !------------------------------------------------------------------------------!
+      !   surface bcs; wfsurf                                                        !
+      !------------------------------------------------------------------------------!
+
+      DO I = 1, M
+         IF(ISWETN(I) == 1)THEN
+            VHF_AGE(I,1) = AF(I,1) / (AF(I,1)-1.)
+            VHPF_AGE(I,1) = -DTI *(WFSURF(I)-SWRADF(I) &
+               +RAD(I,1)-RAD(I,2)) / (-DZ(I,1)*D(I)) - F_AGE(I,1)
+            VHPF_AGE(I,1) = VHPF_AGE(I,1) / (AF(I,1)-1.)
+         END IF
+      END DO
+
+      DO K = 2, KBM2
+         DO I = 1, M
+            IF(ISWETN(I) == 1)THEN
+               VHPF_AGE(I,K)=1./ (AF(I,K)+CF(I,K)*(1.-VHF_AGE(I,K-1))-1.)
+               VHF_AGE(I,K) = AF(I,K) * VHPF_AGE(I,K)
+               VHPF_AGE(I,K) = (CF(I,K)*VHPF_AGE(I,K-1)-DBLE(F_AGE(I,K)) &
+                  +DTI*(RAD(I,K)-RAD(I,K+1))/(D(I)*DZ(I,K)))*VHPF_AGE(I,K)
+            END IF
+         END DO
+      END DO
+
+      # if !defined (WET_DRY)
+      FF_AGE(1:M,1:KBM1) = F_AGE(1:M,1:KBM1)
+      # else
+      DO  K = 1, KBM1
+         DO  I = 1, M
+            IF(ISWETN(I) == 1)THEN
+               FF_AGE(I,K) = F_AGE(I,K)
+            END IF
+         END DO
+      END DO
+      # endif
+
+      DO I = 1, M
+      # if !defined (WET_DRY)
+         IF (ISONB(I) /= 2) THEN
+      # else
+         IF(ISWETN(I) == 1 .AND.ISONB(I) /= 2)THEN
+      # endif
+            TMP1=PFPXB_AGE(I)*COS(SITA_GD(I))+PFPYB_AGE(I)*SIN(SITA_GD(I))
+            TMP2=AH_BOTTOM(I)*PHPN(I)
+            TMP3=KHBOTTOM(I)+UMOLPR+AH_BOTTOM(I)*PHPN(I)*PHPN(I)
+            TMP=TMP1*TMP2/TMP3*(KHBOTTOM(I)+UMOLPR)
+
+            TMP=0.0_SP
+            GW=0.0_SP
+
+            FF_AGE(I,KBM1) = ((CF(I,KBM1)*VHPF_AGE(I,KBM2)-FF_AGE(I,KBM1)-GW &
+               +DTI*(RAD(I,KBM1)-RAD(I,KB)-TMP)/(D(I)*DZ(I,KBM1))) &
+               /(CF(I,KBM1)*(1.-VHF_AGE(I,KBM2))-1.))
+         END IF
+      END DO
+
+      DO  K = 2, KBM1
+         KI = KB - K
+         DO  I = 1, M
+      #  if !defined (WET_DRY)
+            IF (D(I) > 0.0_SP .AND.ISONB(I) /= 2) THEN
+      #  else
+            IF(ISWETN(I) == 1 .AND.ISONB(I) /= 2)THEN
+      #  endif
+               FF_AGE(I,KI) = (VHF_AGE(I,KI)*FF_AGE(I,KI+1)+VHPF_AGE(I,KI))
+            END IF
+         END DO
+      END DO
+
+      DO I = 1, M
+      #  if defined (WET_DRY)
+         IF(ISWETN(I)*ISWETNT(I) == 1 )then
+      #  endif
+         DO K = 1, KBM1
+            F_AGE(I,K) = FF_AGE(I,K)
+         END DO
+      #  if defined (WET_DRY)
+         END IF
+      #  endif
+      END DO
+
+      !   
+      !---- specify the source term------------------------------------------|
+      !
+      IF(INTTIME.GE.DYESTART.AND.INTTIME.LE.DYESTOP) THEN
+      DO KK=1, KSPE_DYE
+         K=K_SPECIFY(KK)
+         DO J=1,MSPE_DYE
+            I = NLID(M_SPECIFY(J))
+            F_AGE(I,K)= DYE_SOURCE_TERM
+         ENDDO
+      ENDDO
+      ENDIF
+
+      IF(DBG_SET(DBG_SBR)) WRITE(IPT,*)"End: vdif_dye_age"
+      RETURN
+      END SUBROUTINE VDIF_DYE_AGE
+
+      SUBROUTINE BCOND_DYE_AGE    
+
+      !------------------------------------------------------------------------------|
+      USE ALL_VARS
+      USE BCS
+      USE MOD_OBCS
+      IMPLICIT NONE
+      REAL(SP) :: S2D,S2D_NEXT,S2D_OBC,T2D,T2D_NEXT,T2D_OBC,XFLUX2D,TMP
+      INTEGER  :: I,J,K,J1,J11,J22
+      REAL(SP) :: SMAX,SMIN
+      !------------------------------------------------------------------------------|
+
+      IF(IOBCN > 0) THEN
+         !
+         !  SET DYE_AGE CONDITIONS ON OUTER BOUNDARY
+         !
+         DO I=1,IOBCN
+            J=I_OBC_N(I)
+            J1=NEXT_OBC(I)
+            S2D=0.0_SP
+            S2D_NEXT=0.0_SP
+            XFLUX2D=0.0_SP
+            DO K=1,KBM1
+               S2D=S2D+DYE_AGE(J,K)*DZ(J,K)
+               S2D_NEXT=S2D_NEXT+DYEF_AGE(J1,K)*DZ(J1,K)
+               XFLUX2D=XFLUX2D+XFLUX_OBC(I,K)
+            END DO
+      
+            IF(UARD_OBCN(I) > 0.0_SP) THEN
+               TMP=XFLUX2D+S2D*UARD_OBCN(I)
+               S2D_OBC=(S2D*DT(J)-TMP*DTI/ART1(J))/D(J)
+               DO K=1,KBM1
+                  DYEF_AGE(J,K)=DYEF_AGE(J1,K)
+               END DO
+
+               DO K=1,KBM1
+                  SMAX = MAXVAL(DYE_AGE(NBSN(J,1:NTSN(J)),K))
+                  SMIN = MINVAL(DYE_AGE(NBSN(J,1:NTSN(J)),K))
+                  IF(K == 1)THEN
+                     SMAX = MAX(SMAX,(DYE_AGE(J,K)*DZ(J,K+1)+DYE_AGE(J,K+1)*DZ(J,K))/&
+                        (DZ(J,K)+DZ(J,K+1)))
+                     SMIN = MIN(SMIN,(DYE_AGE(J,K)*DZ(J,K+1)+DYE_AGE(J,K+1)*DZ(J,K))/&
+                        (DZ(J,K)+DZ(J,K+1)))
+                  ELSE IF(K == KBM1)THEN
+                     SMAX = MAX(SMAX,(DYE_AGE(J,K)*DZ(J,K-1)+DYE_AGE(J,K-1)*DZ(J,K))/&
+                        (DZ(J,K)+DZ(J,K-1)))
+                     SMIN = MIN(SMIN,(DYE_AGE(J,K)*DZ(J,K-1)+DYE_AGE(J,K-1)*DZ(J,K))/&
+                        (DZ(J,K)+DZ(J,K-1)))
+                  ELSE
+                     SMAX = MAX(SMAX,(DYE_AGE(J,K)*DZ(J,K-1)+DYE_AGE(J,K-1)*DZ(J,K))/&
+                        (DZ(J,K)+DZ(J,K-1)),&
+                        (DYE_AGE(J,K)*DZ(J,K+1)+DYE_AGE(J,K+1)*DZ(J,K))/&
+                        (DZ(J,K)+DZ(J,K+1)))
+                     SMIN = MIN(SMIN,(DYE_AGE(J,K)*DZ(J,K-1)+DYE_AGE(J,K-1)*DZ(J,K))/&
+                        (DZ(J,K)+DZ(J,K-1)),&
+                        (DYE_AGE(J,K)*DZ(J,K+1)+DYE_AGE(J,K+1)*DZ(J,K))/&
+                        (DZ(J,K)+DZ(J,K+1)))
+                  END IF
+                  IF(SMIN-DYEF_AGE(J,K) > 0.0_SP) DYEF_AGE(J,K) = SMIN
+                  IF(DYEF_AGE(J,K)-SMAX > 0.0_SP) DYEF_AGE(J,K) = SMAX
+               END DO
+            ELSE
+                  DO K=1,KBM1
+                     DYEF_AGE(J,K)=DYE_AGE(J,K)
+                  END DO
+            END IF
+         END DO
+      END IF
+
+      RETURN
+   END SUBROUTINE BCOND_DYE_AGE
+# endif
+! YULONG WANG 20200625<==
+
 END MODULE MOD_DYE
 # else
    SUBROUTINE SETUP_DYE

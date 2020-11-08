@@ -1341,6 +1341,27 @@ SUBROUTINE INTERNAL_STEP
      DYE = DYEF                                     !Update to new time level  !
      
      !!     IF(MSR) WRITE(IPT,*) 'CALL Dye_on--iint=',iint,IINT_SPE_DYE_B
+
+# if defined (DYE_AGE_ACTIVE)
+! YULONG WANG 20200625==>
+
+     CALL ADV_DYE_AGE                     ! advection
+
+#     if defined(MULTIPROCESSOR)
+     IF(PAR)CALL NODE_MATCH(1,NBN,BN_MLT,BN_LOC,BNC,MT,KB,MYID,NPROCS,DYEF_AGE)
+#     endif
+
+     CALL VDIF_DYE_AGE(DYEF_AGE)          ! vertical diffusion
+
+#     if defined (MULTIPROCESSOR)
+     IF(PAR)CALL AEXCHANGE(NC,MYID,NPROCS,DYEF_AGE)
+#     endif
+
+     CALL BCOND_DYE_AGE                   ! boundary conditions
+
+     DYE_AGE = DYEF_AGE                   ! update to new time level
+# endif
+! YULONG WANG 20200625<==
   END IF                                         !                          !
   !==================================================================================!
 #   endif  
