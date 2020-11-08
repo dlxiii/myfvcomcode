@@ -55,7 +55,7 @@ MODULE MOD_HEATFLUX
 ! YULONG WANG 20201027==>
 # if defined (DLW_CALCULATED)	
    REAL(SP) :: CLOUD_COVERAGE
-   REAL(SP) :: PRECIPITATION_PRC
+   REAL(SP) :: HEAT_PRECIPIT
 # else		
    REAL(SP) :: LONGWAVE_RADIATION  
 # endif
@@ -81,7 +81,7 @@ MODULE MOD_HEATFLUX
       & RELATIVE_HUMIDITY,                   &
       & SURFACE_PRESSURE,                    &
       & CLOUD_COVERAGE,                      &
-      & PRECIPITATION_PRC,                   &
+      & HEAT_PRECIPIT,                       &
       & SHORTWAVE_RADIATION,                 &
       & HEATING_LONGWAVE_PERCTAGE_IN_HEATFLUX,    &
       & HEATING_LONGWAVE_LENGTHSCALE_IN_HEATFLUX, &
@@ -163,7 +163,7 @@ MODULE MOD_HEATFLUX
 ! YULONG WANG 20201027==>
 # if defined (DLW_CALCULATED)		
    CLOUD_COVERAGE         = 0.0_SP
-   PRECIPITATION_PRC      = 0.0_SP
+   HEAT_PRECIPIT          = 0.0_SP
 # else
    LONGWAVE_RADIATION     = 0.0_SP
 # endif   

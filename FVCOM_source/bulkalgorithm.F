@@ -107,13 +107,12 @@
     sqe = sqh * -1.
 
 !*********** rainfall and evaporation ***************
-    rain_neg = rain * -1.                          ! 
     IF (windabs>=1.) THEN
         evap = rhoa*Ce*dt*windabs * -1.
     ELSE
         tbifu=dt+0.61*TaK*dq
         IF (tbifu< 0.) THEN
-            evap = rain_neg
+            evap = rain * -1.
         ELSE    
             evap = rhoa*Ced*tbifu**(1./3.)*dq * -1.
         END IF

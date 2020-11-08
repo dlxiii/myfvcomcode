@@ -384,8 +384,6 @@ MODULE MOD_FORCE
   TYPE(NCVAR), POINTER :: WAVES_UB_BOT_N,    WAVES_UB_BOT_P    ! BOTTOM VELOCITY
   ! =================================================================
   ! SURFACE PRECIPTATION DATA
-! YULONG WANG 20201108==>
-# if !defined (DLW_CALCULATED)  
   INTEGER :: PRECIP_FORCING_TYPE
 
   INTEGER,PARAMETER :: PRECIP_IS_WRFGRID     = 0
@@ -399,8 +397,6 @@ MODULE MOD_FORCE
   TYPE(INTERP_WEIGHTS),POINTER :: PRECIP_INTP_C
   TYPE(NCVAR), POINTER :: PRECIP_PRE_N, PRECIP_PRE_P   ! PRECIPITATION
   TYPE(NCVAR), POINTER :: PRECIP_EVP_N, PRECIP_EVP_P   ! EVAPORATION
-# endif
-! YULONG WANG 20201108<==
 
   ! =================================================================
   ! AIR PRESSURE FILE DATA 
@@ -477,11 +473,7 @@ MODULE MOD_FORCE
   PUBLIC :: UPDATE_OFFLINE_BIOLOGY_FORCING
 # endif
 
-! YULONG WANG 20201108==>
-# if !defined (DLW_CALCULATED)
   PUBLIC :: UPDATE_PRECIPITATION
-! YULONG WANG 20201108==>
-# if !defined (DLW_CALCULATED)
   PUBLIC :: UPDATE_AIRPRESSURE
   PUBLIC :: UPDATE_TIDE
   PUBLIC :: UPDATE_RIVERS
@@ -6341,7 +6333,7 @@ CONTAINS
    
    IF(HEATING_FRESHWATER)THEN
      ALLOCATE(USRCOARE(0:MT)) ; USRCOARE = 0.0_SP
-   END IF   
+   END IF  
 # endif
 ! YULONG WANG 20201027<==	
 !----------------------------REPORT--------------------------------------------!
@@ -6370,7 +6362,7 @@ CONTAINS
 ! YULONG WANG 20201027==>																														   
 # if defined (DLW_CALCULATED)
        write(cld_covstrng,'(f8.4)') CLOUD_COVERAGE
-       write(prcstr_strng,'(f8.4)') PRECIPITATION_PRC
+       write(prcstr_strng,'(f8.4)') HEAT_PRECIPIT
 # else			 
        write(dlw_airstrng,'(f8.4)') LONGWAVE_RADIATION
 # endif
@@ -6765,10 +6757,11 @@ CONTAINS
        NULLIFY(STORAGE_VEC)
 
        ! PRECIPITATION
-       VAR => FIND_VAR(PRECIP_FILE,"Precipitation",FOUND)
+       VAR => FIND_VAR(HEAT_FILE,"Precipitation",FOUND)
+       IF(.not. FOUND) VAR => FIND_VAR(HEAT_FILE,"Precipitation",FOUND)
        IF(.not. FOUND) CALL FATAL_ERROR &
             & ("IN SURFACE WIND BOUNDARY CONDITION FILE OBJECT",&
-            & "FILE NAME: "//TRIM(PRECIPITATION_FILE),&
+            & "FILE NAME: "//TRIM(HEATING_CALCULATE_FILE),&
             & "COULD NOT FIND VARIABLE 'PRECIPITATION'")
 
        ! MAKE SPACE FOR THE DATA FROM THE FILE
@@ -12564,6 +12557,7 @@ CONTAINS
 # if defined (DLW_CALCULATED)
     REAL(SP)                  :: NLW_AIR
     REAL(SP), ALLOCATABLE     :: QEVAP(:),QPREC(:)
+    REAL(SP)                  :: EVAP
 # endif
 ! YULONG WANG 20201027<==
     TYPE(NCFTIME), POINTER    :: FTM
@@ -12612,7 +12606,7 @@ CONTAINS
 ! YULONG WANG 20201027==>
 # if defined (DLW_CALCULATED)
      CLD_COV(1:MT) = CLOUD_COVERAGE
-     QPREC(1:MT) = PRECIPITATION_PRC
+     QPREC(1:MT) = HEAT_PRECIPIT
 # else
 	DLW_AIR(1:MT) = LONGWAVE_RADIATION
 # endif
@@ -12695,10 +12689,10 @@ CONTAINS
 ! YULONG WANG 20201027==>
 # else
           IF(TRIM(COARE_VERSION) == 'BULKALGORITHM')THEN
-               !RAIN(I) = QPREC(I)*3600*1000  ! change unit to mm/hr  from m/s
-               RAIN(I) = QPREC(I)*1000  ! From m/s to kg/m2/s, 1kg/m2/s = 1mm/s, 1m/s = 1000kg/m2/s
+               ! RAIN(I) = QPREC(I)*3600*1000  ! change unit to mm/hr  from m/s
+               ! RAIN(I) = QPREC(I)*1000  ! From m/s to kg/m2/s, 1kg/m2/s = 1mm/s, 1m/s = 1000kg/m2/s
                CALL BULKALGORITHM(WDS,T_AIR(I),RH_AIR(I),PA_AIR(I),T1(I,1),CLD_COV(I), &
-               NLW_AIR,HSB,HLB,RAIN(I),EVAP)
+               NLW_AIR,HSB,HLB,QPREC(I)*1000,EVAP)
                HEAT_NET(I)  = DSW_AIR(I)*0.91 + NLW_AIR + HSB + HLB ! SAME SYMBOL SAME DIRECTION
                HEAT_SWV(I)  = DSW_AIR(I)*0.91
                HEAT_SENSIBLE(I) = HSB
@@ -12803,7 +12797,7 @@ CONTAINS
        CLD_COV = FTM%NEXT_WGHT * VNP + FTM%PREV_WGHT * VPP
 
        ! PRECIPITATION
-       CALL UPDATE_VAR_BRACKET(PRECIP_FILE,PRECIP_PRE_P,PRECIP_PRE_N,PTIME,STATUS,PRECIP_INTP_N)
+       CALL UPDATE_VAR_BRACKET(HEAT_FILE,PRECIP_PRE_P,PRECIP_PRE_N,HTIME,STATUS)
        IF (STATUS /= 0) THEN
           CALL FATAL_ERROR("COULD NOT UPATE PRECIP BRACKET: BOUNDS EXCEEDED?")
        end if
@@ -12915,10 +12909,10 @@ CONTAINS
 ! YULONG WANG 20201027==>
 # else
           IF(TRIM(COARE_VERSION) == 'BULKALGORITHM')THEN
-               !RAIN(I) = QPREC(I)*3600*1000  ! change unit to mm/hr  from m/s
-               RAIN(I) = QPREC(I)*1000  ! From m/s to kg/m2/s, 1kg/m2/s = 1mm/s, 1m/s = 1000kg/m2/s
+               ! RAIN(I) = QPREC(I)*3600*1000  ! change unit to mm/hr  from m/s
+               ! RAIN(I) = QPREC(I)*1000  ! From m/s to kg/m2/s, 1kg/m2/s = 1mm/s, 1m/s = 1000kg/m2/s
                CALL BULKALGORITHM(WDS,T_AIR(I),RH_AIR(I),PA_AIR(I),T1(I,1),CLD_COV(I), &
-               NLW_AIR,HSB,HLB,RAIN(I),EVAP)
+               NLW_AIR,HSB,HLB,QPREC(I)*1000,EVAP)
                HEAT_NET(I) = NLW_AIR+DSW_AIR(I)*0.91+HSB+HLB
                HEAT_SWV(I)  = DSW_AIR(I)*0.91
                HEAT_SENSIBLE(I) = HSB
@@ -12989,7 +12983,7 @@ CONTAINS
        CLD_COV = FTM%NEXT_WGHT * VNP + FTM%PREV_WGHT * VPP
 
        ! PRECIPITATION
-       CALL UPDATE_VAR_BRACKET(PRECIP_FILE,PRECIP_PRE_P,PRECIP_PRE_N,PTIME,STATUS,PRECIP_INTP_N)
+       CALL UPDATE_VAR_BRACKET(HEAT_FILE,PRECIP_PRE_P,PRECIP_PRE_N,HTIME,STATUS)
        IF (STATUS /= 0) THEN
           CALL FATAL_ERROR("COULD NOT UPATE PRECIP BRACKET: BOUNDS EXCEEDED?")
        end if
@@ -13102,10 +13096,10 @@ CONTAINS
 ! YULONG WANG 20201027==>
 # else
           IF(TRIM(COARE_VERSION) == 'BULKALGORITHM')THEN
-               !RAIN(I) = QPREC(I)*3600*1000  ! change unit to mm/hr  from m/s
-               RAIN(I) = QPREC(I)*1000  ! From m/s to kg/m2/s, 1kg/m2/s = 1mm/s, 1m/s = 1000kg/m2/s
+               ! RAIN(I) = QPREC(I)*3600*1000  ! change unit to mm/hr  from m/s
+               ! RAIN(I) = QPREC(I)*1000  ! From m/s to kg/m2/s, 1kg/m2/s = 1mm/s, 1m/s = 1000kg/m2/s
                CALL BULKALGORITHM(WDS,T_AIR(I),RH_AIR(I),PA_AIR(I),T1(I,1),CLD_COV(I), &
-               NLW_AIR,HSB,HLB,RAIN(I),EVAP)
+               NLW_AIR,HSB,HLB,QPREC(I)*1000,EVAP)
                HEAT_NET(I) = NLW_AIR+DSW_AIR(I)*0.91+HSB+HLB
                HEAT_SWV(I)  = DSW_AIR(I)*0.91
                HEAT_SENSIBLE(I) = HSB
@@ -13956,8 +13950,6 @@ CONTAINS
   END SUBROUTINE UPDATE_OFFLINE_BIOLOGY_FORCING
 # endif
 
-! YULONG WANG 20201108==>
-# if !defined (DLW_CALCULATED)
 !==============================================================================|
   SUBROUTINE UPDATE_PRECIPITATION(NOW,Qprec,Qevap)
     IMPLICIT NONE
@@ -14071,8 +14063,6 @@ CONTAINS
 
   END SUBROUTINE UPDATE_PRECIPITATION
   !==============================================================================|
-# if !defined (DLW_CALCULATED)
-! YULONG WANG 20201108<==
 
 !==============================================================================|
   SUBROUTINE UPDATE_WAVE(NOW,WHS,WDIR,WPER,WLENGTH,WPER_BOT,WUB_BOT)

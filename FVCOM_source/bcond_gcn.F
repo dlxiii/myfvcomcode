@@ -754,6 +754,8 @@
          IF(PAR)CALL AEXCHANGE(NC,MYID,NPROCS,HSENS_WATTS)
          IF(PAR)CALL AEXCHANGE(NC,MYID,NPROCS,HLAT_WATTS)
          IF(PAR)CALL AEXCHANGE(NC,MYID,NPROCS,LWRAD_WATTS)
+         IF(PAR)CALL AEXCHANGE(NC,MYID,NPROCS,Qprec)
+         IF(PAR)CALL AEXCHANGE(NC,MYID,NPROCS,Qevap)
 # endif	 
 ! YULONG WANG 20201027<==
 # endif
@@ -797,11 +799,14 @@
       END IF
 # endif      
 
+! YULONG WANG 20201027==>
+# if !defined (DLW_CALCULATED)  
       IF (PRECIPITATION_ON) THEN
          CALL UPDATE_PRECIPITATION(IntTime,Qprec,Qevap)
          ! NO RAMP FOR PRECIP/EVAP
       END IF
-
+# endif	 
+! YULONG WANG 20201027<==
 
 # if defined (WAVE_CURRENT_INTERACTION) && (WAVE_OFFLINE)
       IF (WAVE_ON) THEN
@@ -860,11 +865,14 @@
 !
 !-- Set Precipitation/Evaporation/Surface Wind ---------------------------------|
 !
-
+! YULONG WANG 20201027==>
+# if !defined (DLW_CALCULATED) 
       IF (PRECIPITATION_ON) THEN
          CALL UPDATE_PRECIPITATION(ExtTime,Qprec2,Qevap2)
          ! NO RAMP FOR PRECIP/EVAP
       END IF
+# endif	 
+! YULONG WANG 20201027<==
       
       IF (WIND_ON) THEN
 
