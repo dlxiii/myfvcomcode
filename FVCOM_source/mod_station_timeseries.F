@@ -3,6 +3,11 @@ MODULE MOD_STATION_TIMESERIES
   USE MOD_TIME
   USE NETCDF
   USE VARS_WAVE
+! YULONG WANG 20201027==>
+# if defined (DYE_RELEASE)
+  USE MOD_DYE
+# endif
+! YULONG WANG 20201027<==
   IMPLICIT NONE
   SAVE
   
@@ -34,8 +39,20 @@ MODULE MOD_STATION_TIMESERIES
   LOGICAL OUT_SQH
   LOGICAL OUT_SQE
   LOGICAL OUT_NET
+  LOGICAL OUT_PRC
+  LOGICAL OUT_EVP
 # endif	 
 ! YULONG WANG 20201027<==
+! YULONG WANG 20201109==>
+# if defined (DYE_RELEASE)
+IF(DYE_ON)THEN
+  LOGICAL OUT_DYE
+# if defined (DYE_AGE_ACTIVE)
+  LOGICAL OUT_DYE_AGE
+# endif
+END IF
+# endif
+! YULONG WANG 20201109<==
   CHARACTER(LEN=80) OUT_INTERVAL
   
   NAMELIST /NML_STATION_TIMESERIES/        &
@@ -67,8 +84,20 @@ MODULE MOD_STATION_TIMESERIES
       & OUT_SQH,                          &
       & OUT_SQE,                          &
       & OUT_NET,                          &
+      & OUT_PRC,                          &
+      & OUT_EVP,                          &
 # endif	 
 ! YULONG WANG 20201027<==
+! YULONG WANG 20201109==>
+# if defined (DYE_RELEASE)
+  IF(DYE_ON)THEN
+      & OUT_DYE,                          &
+# if defined (DYE_AGE_ACTIVE)
+      & OUT_DYE_AGE,                      &
+# endif
+  END IF
+# endif
+! YULONG WANG 20201109<==
        & OUT_INTERVAL
        
   INTEGER NSTA       
@@ -126,8 +155,21 @@ MODULE MOD_STATION_TIMESERIES
    integer,private :: sqh_s_vid
    integer,private :: sqe_s_vid
    integer,private :: net_s_vid
+   integer,private :: prc_s_vid
+   integer,private :: evp_s_vid
 # endif	 
 ! YULONG WANG 20201027<==
+
+! YULONG WANG 20201109==>
+# if defined (DYE_RELEASE)
+  IF(DYE_ON)THEN
+   integer,private :: dye_s_vid
+# if defined (DYE_AGE_ACTIVE)
+   integer,private :: dye_age_s_vid
+# endif
+  END IF
+# endif
+! YULONG WANG 20201109<==
    
 #  if defined (WAVE_CURRENT_INTERACTION) && !defined (WAVE_OFFLINE)
    integer,private :: hs_s_vid
@@ -191,8 +233,20 @@ MODULE MOD_STATION_TIMESERIES
    OUT_SQH                  = .False.
    OUT_SQE                  = .False.
    OUT_NET                  = .False.
+   OUT_PRC                  = .False.
+   OUT_EVP                  = .False.
 # endif	 
 ! YULONG WANG 20201027<==
+! YULONG WANG 20201109==>
+# if defined (DYE_RELEASE)
+  IF(DYE_ON)THEN
+   OUT_DYE                  = .False.
+# if defined (DYE_AGE_ACTIVE)
+   OUT_DYE_AGE              = .False.
+# endif
+  END IF
+# endif
+! YULONG WANG 20201109<==
    OUT_INTERVAL              = "A length of time: 'seconds= ','days= ', or 'cycles= '"
    
    
@@ -579,8 +633,53 @@ MODULE MOD_STATION_TIMESERIES
            &,nprocs,ipt, stck_cnt)
       deallocate(ftemp)
     END IF 
+    ! PRECIPITATION VALUE
+    IF(OUT_PRC)THEN 
+      allocate(ftemp(m))
+      ftemp =Qprec(1:m)
+      i1 = lbound(ftemp,1) ; i2 = ubound(ftemp,1)
+      call putvar(i1,i2,m,mgl,1,1,"n",ftemp,nc_ofid,prc_s_vid,myid&
+           &,nprocs,ipt, stck_cnt)
+      deallocate(ftemp)
+    END IF 
+    ! EVAPORATION VALUE
+    IF(OUT_EVP)THEN 
+      allocate(ftemp(m))
+      ftemp =Qevap(1:m)
+      i1 = lbound(ftemp,1) ; i2 = ubound(ftemp,1)
+      call putvar(i1,i2,m,mgl,1,1,"n",ftemp,nc_ofid,evp_s_vid,myid&
+           &,nprocs,ipt, stck_cnt)
+      deallocate(ftemp)
+    END IF 
 # endif	 
 ! YULONG WANG 20201027<==
+
+! YULONG WANG 20201109==>
+# if defined (DYE_RELEASE)
+  IF(DYE_ON)THEN
+    ! DYE
+    IF(OUT_DYE)THEN 
+      allocate(ftemp(m))
+      ftemp =DYE(1:m)
+      i1 = lbound(ftemp,1) ; i2 = ubound(ftemp,1)
+      call putvar(i1,i2,m,mgl,1,1,"n",ftemp,nc_ofid,dye_s_vid,myid&
+          &,nprocs,ipt, stck_cnt)
+      deallocate(ftemp)
+    END IF 
+# if defined (DYE_AGE_ACTIVE)
+    ! DYE_AGE
+    IF(OUT_DYE_AGE)THEN 
+      allocate(ftemp(m))
+      ftemp =DYE_AGE(1:m)
+      i1 = lbound(ftemp,1) ; i2 = ubound(ftemp,1)
+      call putvar(i1,i2,m,mgl,1,1,"n",ftemp,nc_ofid,dye_age_s_vid,myid&
+          &,nprocs,ipt, stck_cnt)
+      deallocate(ftemp)
+    END IF 
+# endif
+  END IF
+# endif
+! YULONG WANG 20201109<==
 
 #    if defined (WAVE_CURRENT_INTERACTION) && !defined (WAVE_OFFLINE)
      IF(OUT_SIG_WAVE_HEIGHT)THEN
@@ -929,7 +1028,7 @@ NETCDF_TIMESTRING = 'seconds after 00:00:00'
 # if defined (DLW_CALCULATED) && (HEATING_CALCULATED)
    ! integer,private :: airtemp_s_vid
    if(OUT_AIR_TEMP)then
-    ierr = nf90_def_var(nc_ofid,"air_temperature",nf90_float,dynm2ds,airtemp_s_vid)
+    ierr = nf90_def_var(nc_ofid,"MET_air_temp",nf90_float,dynm2ds,airtemp_s_vid)
     ierr = nf90_put_att(nc_ofid,airtemp_s_vid,"long_name","Air temperature")
     ierr = nf90_put_att(nc_ofid,airtemp_s_vid,"units","(Degrees_C)")
     ierr = nf90_put_att(nc_ofid,airtemp_s_vid,"standard_name","air temperature")
@@ -937,7 +1036,7 @@ NETCDF_TIMESTRING = 'seconds after 00:00:00'
    end if
    ! integer,private :: airrhum_s_vid
    if(OUT_AIR_RHUM)then
-    ierr = nf90_def_var(nc_ofid,"relative_humidity",nf90_float,dynm2ds,airrhum_s_vid)
+    ierr = nf90_def_var(nc_ofid,"MET_rela_hum",nf90_float,dynm2ds,airrhum_s_vid)
     ierr = nf90_put_att(nc_ofid,airrhum_s_vid,"long_name","Relative humidity")
     ierr = nf90_put_att(nc_ofid,airrhum_s_vid,"units","(%)")
     ierr = nf90_put_att(nc_ofid,airrhum_s_vid,"standard_name","relative humidity")
@@ -945,7 +1044,7 @@ NETCDF_TIMESTRING = 'seconds after 00:00:00'
    end if
    ! integer,private :: aircld_s_vid
    if(OUT_AIR_CLD)then
-    ierr = nf90_def_var(nc_ofid,"cloud_coverage",nf90_float,dynm2ds,aircld_s_vid)
+    ierr = nf90_def_var(nc_ofid,"MET_cloud_cov",nf90_float,dynm2ds,aircld_s_vid)
     ierr = nf90_put_att(nc_ofid,aircld_s_vid,"long_name","Cloud coverage")
     ierr = nf90_put_att(nc_ofid,aircld_s_vid,"units","(-)")
     ierr = nf90_put_att(nc_ofid,aircld_s_vid,"standard_name","cloud coverage")
@@ -953,7 +1052,7 @@ NETCDF_TIMESTRING = 'seconds after 00:00:00'
    end if
    ! integer,private :: dsw_s_vid
    if(OUT_DSW)then
-    ierr = nf90_def_var(nc_ofid,"q_short",nf90_float,dynm2ds,dsw_s_vid)
+    ierr = nf90_def_var(nc_ofid,"MET_Q_short",nf90_float,dynm2ds,dsw_s_vid)
     ierr = nf90_put_att(nc_ofid,dsw_s_vid,"long_name","Shortwave radiation")
     ierr = nf90_put_att(nc_ofid,dsw_s_vid,"units","(W/m2)")
     ierr = nf90_put_att(nc_ofid,dsw_s_vid,"standard_name","shortwavev radiation flux")
@@ -961,7 +1060,7 @@ NETCDF_TIMESTRING = 'seconds after 00:00:00'
    end if
    ! integer,private :: sql_s_vid
    if(OUT_SQL)then
-    ierr = nf90_def_var(nc_ofid,"q_long",nf90_float,dynm2ds,sql_s_vid)
+    ierr = nf90_def_var(nc_ofid,"MET_Q_long",nf90_float,dynm2ds,sql_s_vid)
     ierr = nf90_put_att(nc_ofid,sql_s_vid,"long_name","Longwave radiation")
     ierr = nf90_put_att(nc_ofid,sql_s_vid,"units","(W/m2)")
     ierr = nf90_put_att(nc_ofid,sql_s_vid,"standard_name","longwage radiation flux")
@@ -969,7 +1068,7 @@ NETCDF_TIMESTRING = 'seconds after 00:00:00'
    end if
    ! integer,private :: sqh_s_vid
    if(OUT_SQH)then
-    ierr = nf90_def_var(nc_ofid,"q_sensb",nf90_float,dynm2ds,sqh_s_vid)
+    ierr = nf90_def_var(nc_ofid,"MET_Q_sensb",nf90_float,dynm2ds,sqh_s_vid)
     ierr = nf90_put_att(nc_ofid,sqh_s_vid,"long_name","Sensible heat")
     ierr = nf90_put_att(nc_ofid,sqh_s_vid,"units","(W/m2)")
     ierr = nf90_put_att(nc_ofid,sqh_s_vid,"standard_name","Sensible heat flux")
@@ -977,7 +1076,7 @@ NETCDF_TIMESTRING = 'seconds after 00:00:00'
    end if
    ! integer,private :: sqe_s_vid
    if(OUT_SQE)then
-    ierr = nf90_def_var(nc_ofid,"q_latnt",nf90_float,dynm2ds,sqe_s_vid)
+    ierr = nf90_def_var(nc_ofid,"MET_Q_latnt",nf90_float,dynm2ds,sqe_s_vid)
     ierr = nf90_put_att(nc_ofid,sqe_s_vid,"long_name","Latent heat")
     ierr = nf90_put_att(nc_ofid,sqe_s_vid,"units","(W/m2)")
     ierr = nf90_put_att(nc_ofid,sqe_s_vid,"standard_name","latent heat flux")
@@ -985,14 +1084,55 @@ NETCDF_TIMESTRING = 'seconds after 00:00:00'
    end if
    ! integer,private :: net_s_vid
    if(OUT_NET)then
-    ierr = nf90_def_var(nc_ofid,"q_net",nf90_float,dynm2ds,net_s_vid)
+    ierr = nf90_def_var(nc_ofid,"MET_Q_netflx",nf90_float,dynm2ds,net_s_vid)
     ierr = nf90_put_att(nc_ofid,net_s_vid,"long_name","Net heat")
     ierr = nf90_put_att(nc_ofid,net_s_vid,"units","(W/m2)")
     ierr = nf90_put_att(nc_ofid,net_s_vid,"standard_name","sea surface ent heat flux")
     ierr = nf90_put_att(nc_ofid,net_s_vid,"type","data")
    end if
+   ! integer,private :: prc_s_vid
+   if(OUT_PRC)then
+    ierr = nf90_def_var(nc_ofid,"MET_precp",nf90_float,dynm2ds,prc_s_vid)
+    ierr = nf90_put_att(nc_ofid,prc_s_vid,"long_name","Precipitation")
+    ierr = nf90_put_att(nc_ofid,prc_s_vid,"units","(m/s)")
+    ierr = nf90_put_att(nc_ofid,prc_s_vid,"standard_name","precipitation")
+    ierr = nf90_put_att(nc_ofid,prc_s_vid,"type","data")
+   end if
+   ! integer,private :: evp_s_vid
+   if(OUT_EVP)then
+    ierr = nf90_def_var(nc_ofid,"MET_evapor",nf90_float,dynm2ds,evp_s_vid)
+    ierr = nf90_put_att(nc_ofid,evp_s_vid,"long_name","Evaporation")
+    ierr = nf90_put_att(nc_ofid,evp_s_vid,"units","(m/s)")
+    ierr = nf90_put_att(nc_ofid,evp_s_vid,"standard_name","sevaporation")
+    ierr = nf90_put_att(nc_ofid,evp_s_vid,"type","data")
+   end if
 # endif	 
 ! YULONG WANG 20201027<==
+
+! YULONG WANG 20201109==>
+# if defined (DYE_RELEASE)
+  IF(DYE_ON)THEN
+    ! DYE
+    IF(OUT_DYE)THEN 
+      ierr = nf90_def_var(nc_ofid,"dye",nf90_float,dynm2ds,dye_s_vid)
+      ierr = nf90_put_att(nc_ofid,dye_s_vid,"long_name","Dye concentration")
+      ierr = nf90_put_att(nc_ofid,dye_s_vid,"units","(-)")
+      ierr = nf90_put_att(nc_ofid,dye_s_vid,"standard_name","dye concentration")
+      ierr = nf90_put_att(nc_ofid,dye_s_vid,"type","data")
+    END IF 
+# if defined (DYE_AGE_ACTIVE)
+    ! DYE_AGE
+    IF(OUT_DYE_AGE)THEN 
+      ierr = nf90_def_var(nc_ofid,"dye_age",nf90_float,dynm2ds,dye_age_s_vid)
+      ierr = nf90_put_att(nc_ofid,dye_age_s_vid,"long_name","Dye concentration age")
+      ierr = nf90_put_att(nc_ofid,dye_age_s_vid,"units","(s)")
+      ierr = nf90_put_att(nc_ofid,dye_age_s_vid,"standard_name","dye concentration age")
+      ierr = nf90_put_att(nc_ofid,dye_age_s_vid,"type","data")
+    END IF 
+# endif
+  END IF
+# endif
+! YULONG WANG 20201109<==
 
 #   if defined (WAVE_CURRENT_INTERACTION) && !defined (WAVE_OFFLINE)
     if(OUT_SIG_WAVE_HEIGHT)then
