@@ -999,16 +999,16 @@ NETCDF_TIMESTRING = 'seconds after 00:00:00'
     end if
 
     if(OUT_WIND_VELOCITY)then
-     ierr = nf90_def_var(nc_ofid,"uwind_speed",nf90_float,dynm2ds,uuwind_s_vid)
+     ierr = nf90_def_var(nc_ofid,"MET_uwind_speed",nf90_float,dynm2ds,uuwind_s_vid)
      ierr = nf90_put_att(nc_ofid,uuwind_s_vid,"long_name","Eastward wind velocity")
-     ierr = nf90_put_att(nc_ofid,uuwind_s_vid,"units","(m/s)")
+     ierr = nf90_put_att(nc_ofid,uuwind_s_vid,"units","m/s")
      ierr = nf90_put_att(nc_ofid,uuwind_s_vid,"standard_name","eastward wind")
      ierr = nf90_put_att(nc_ofid,uuwind_s_vid,"type","data")
      ierr = nf90_put_att(nc_ofid,uuwind_s_vid,"coordinates","time station")
 
-     ierr = nf90_def_var(nc_ofid,"vwind_speed",nf90_float,dynm2ds,vvwind_s_vid)
+     ierr = nf90_def_var(nc_ofid,"MET_vwind_speed",nf90_float,dynm2ds,vvwind_s_vid)
      ierr = nf90_put_att(nc_ofid,vvwind_s_vid,"long_name","Northward wind velocity")
-     ierr = nf90_put_att(nc_ofid,vvwind_s_vid,"units","(m/s)")
+     ierr = nf90_put_att(nc_ofid,vvwind_s_vid,"units","m/s")
      ierr = nf90_put_att(nc_ofid,vvwind_s_vid,"standard_name","northward wind")
      ierr = nf90_put_att(nc_ofid,vvwind_s_vid,"type","data")
      ierr = nf90_put_att(nc_ofid,vvwind_s_vid,"coordinates","time station")
@@ -1016,9 +1016,9 @@ NETCDF_TIMESTRING = 'seconds after 00:00:00'
 
 #   if defined (AIR_PRESSURE) || (HEATING_CALCULATED)
     if(OUT_ATM_PRESSURE)then
-     ierr = nf90_def_var(nc_ofid,"atm_pressure",nf90_float,dynm2ds,atmpres_s_vid)
+     ierr = nf90_def_var(nc_ofid,"MET_atm_pres",nf90_float,dynm2ds,atmpres_s_vid)
      ierr = nf90_put_att(nc_ofid,atmpres_s_vid,"long_name","Sea level pressure")
-     ierr = nf90_put_att(nc_ofid,atmpres_s_vid,"units","(Pa)")
+     ierr = nf90_put_att(nc_ofid,atmpres_s_vid,"units","hPa")
      ierr = nf90_put_att(nc_ofid,atmpres_s_vid,"standard_name","atmospheric pressure")
      ierr = nf90_put_att(nc_ofid,atmpres_s_vid,"type","data")
     end if
@@ -1030,7 +1030,7 @@ NETCDF_TIMESTRING = 'seconds after 00:00:00'
    if(OUT_AIR_TEMP)then
     ierr = nf90_def_var(nc_ofid,"MET_air_temp",nf90_float,dynm2ds,airtemp_s_vid)
     ierr = nf90_put_att(nc_ofid,airtemp_s_vid,"long_name","Air temperature")
-    ierr = nf90_put_att(nc_ofid,airtemp_s_vid,"units","(Degrees_C)")
+    ierr = nf90_put_att(nc_ofid,airtemp_s_vid,"units","Degrees_C")
     ierr = nf90_put_att(nc_ofid,airtemp_s_vid,"standard_name","air temperature")
     ierr = nf90_put_att(nc_ofid,airtemp_s_vid,"type","data")
    end if
@@ -1038,7 +1038,7 @@ NETCDF_TIMESTRING = 'seconds after 00:00:00'
    if(OUT_AIR_RHUM)then
     ierr = nf90_def_var(nc_ofid,"MET_rela_hum",nf90_float,dynm2ds,airrhum_s_vid)
     ierr = nf90_put_att(nc_ofid,airrhum_s_vid,"long_name","Relative humidity")
-    ierr = nf90_put_att(nc_ofid,airrhum_s_vid,"units","(%)")
+    ierr = nf90_put_att(nc_ofid,airrhum_s_vid,"units","%")
     ierr = nf90_put_att(nc_ofid,airrhum_s_vid,"standard_name","relative humidity")
     ierr = nf90_put_att(nc_ofid,airrhum_s_vid,"type","data")
    end if
@@ -1046,7 +1046,7 @@ NETCDF_TIMESTRING = 'seconds after 00:00:00'
    if(OUT_AIR_CLD)then
     ierr = nf90_def_var(nc_ofid,"MET_cloud_cov",nf90_float,dynm2ds,aircld_s_vid)
     ierr = nf90_put_att(nc_ofid,aircld_s_vid,"long_name","Cloud coverage")
-    ierr = nf90_put_att(nc_ofid,aircld_s_vid,"units","(-)")
+    ierr = nf90_put_att(nc_ofid,aircld_s_vid,"units","none")
     ierr = nf90_put_att(nc_ofid,aircld_s_vid,"standard_name","cloud coverage")
     ierr = nf90_put_att(nc_ofid,aircld_s_vid,"type","data")
    end if
@@ -1054,7 +1054,7 @@ NETCDF_TIMESTRING = 'seconds after 00:00:00'
    if(OUT_DSW)then
     ierr = nf90_def_var(nc_ofid,"MET_Q_short",nf90_float,dynm2ds,dsw_s_vid)
     ierr = nf90_put_att(nc_ofid,dsw_s_vid,"long_name","Shortwave radiation")
-    ierr = nf90_put_att(nc_ofid,dsw_s_vid,"units","(W/m2)")
+    ierr = nf90_put_att(nc_ofid,dsw_s_vid,"units","W/m2")
     ierr = nf90_put_att(nc_ofid,dsw_s_vid,"standard_name","shortwavev radiation flux")
     ierr = nf90_put_att(nc_ofid,dsw_s_vid,"type","data")
    end if
@@ -1062,7 +1062,7 @@ NETCDF_TIMESTRING = 'seconds after 00:00:00'
    if(OUT_SQL)then
     ierr = nf90_def_var(nc_ofid,"MET_Q_long",nf90_float,dynm2ds,sql_s_vid)
     ierr = nf90_put_att(nc_ofid,sql_s_vid,"long_name","Longwave radiation")
-    ierr = nf90_put_att(nc_ofid,sql_s_vid,"units","(W/m2)")
+    ierr = nf90_put_att(nc_ofid,sql_s_vid,"units","W/m2")
     ierr = nf90_put_att(nc_ofid,sql_s_vid,"standard_name","longwage radiation flux")
     ierr = nf90_put_att(nc_ofid,sql_s_vid,"type","data")
    end if
@@ -1070,7 +1070,7 @@ NETCDF_TIMESTRING = 'seconds after 00:00:00'
    if(OUT_SQH)then
     ierr = nf90_def_var(nc_ofid,"MET_Q_sensb",nf90_float,dynm2ds,sqh_s_vid)
     ierr = nf90_put_att(nc_ofid,sqh_s_vid,"long_name","Sensible heat")
-    ierr = nf90_put_att(nc_ofid,sqh_s_vid,"units","(W/m2)")
+    ierr = nf90_put_att(nc_ofid,sqh_s_vid,"units","W/m2")
     ierr = nf90_put_att(nc_ofid,sqh_s_vid,"standard_name","Sensible heat flux")
     ierr = nf90_put_att(nc_ofid,sqh_s_vid,"type","data")
    end if
@@ -1078,7 +1078,7 @@ NETCDF_TIMESTRING = 'seconds after 00:00:00'
    if(OUT_SQE)then
     ierr = nf90_def_var(nc_ofid,"MET_Q_latnt",nf90_float,dynm2ds,sqe_s_vid)
     ierr = nf90_put_att(nc_ofid,sqe_s_vid,"long_name","Latent heat")
-    ierr = nf90_put_att(nc_ofid,sqe_s_vid,"units","(W/m2)")
+    ierr = nf90_put_att(nc_ofid,sqe_s_vid,"units","W/m2")
     ierr = nf90_put_att(nc_ofid,sqe_s_vid,"standard_name","latent heat flux")
     ierr = nf90_put_att(nc_ofid,sqe_s_vid,"type","data")
    end if
@@ -1086,7 +1086,7 @@ NETCDF_TIMESTRING = 'seconds after 00:00:00'
    if(OUT_NET)then
     ierr = nf90_def_var(nc_ofid,"MET_Q_netflx",nf90_float,dynm2ds,net_s_vid)
     ierr = nf90_put_att(nc_ofid,net_s_vid,"long_name","Net heat")
-    ierr = nf90_put_att(nc_ofid,net_s_vid,"units","(W/m2)")
+    ierr = nf90_put_att(nc_ofid,net_s_vid,"units","W/m2")
     ierr = nf90_put_att(nc_ofid,net_s_vid,"standard_name","sea surface ent heat flux")
     ierr = nf90_put_att(nc_ofid,net_s_vid,"type","data")
    end if
@@ -1094,7 +1094,7 @@ NETCDF_TIMESTRING = 'seconds after 00:00:00'
    if(OUT_PRC)then
     ierr = nf90_def_var(nc_ofid,"MET_precp",nf90_float,dynm2ds,prc_s_vid)
     ierr = nf90_put_att(nc_ofid,prc_s_vid,"long_name","Precipitation")
-    ierr = nf90_put_att(nc_ofid,prc_s_vid,"units","(m/s)")
+    ierr = nf90_put_att(nc_ofid,prc_s_vid,"units","m/s")
     ierr = nf90_put_att(nc_ofid,prc_s_vid,"standard_name","precipitation")
     ierr = nf90_put_att(nc_ofid,prc_s_vid,"type","data")
    end if
@@ -1102,7 +1102,7 @@ NETCDF_TIMESTRING = 'seconds after 00:00:00'
    if(OUT_EVP)then
     ierr = nf90_def_var(nc_ofid,"MET_evapor",nf90_float,dynm2ds,evp_s_vid)
     ierr = nf90_put_att(nc_ofid,evp_s_vid,"long_name","Evaporation")
-    ierr = nf90_put_att(nc_ofid,evp_s_vid,"units","(m/s)")
+    ierr = nf90_put_att(nc_ofid,evp_s_vid,"units","m/s")
     ierr = nf90_put_att(nc_ofid,evp_s_vid,"standard_name","sevaporation")
     ierr = nf90_put_att(nc_ofid,evp_s_vid,"type","data")
    end if
@@ -1116,7 +1116,7 @@ NETCDF_TIMESTRING = 'seconds after 00:00:00'
     IF(OUT_DYE)THEN 
       ierr = nf90_def_var(nc_ofid,"dye",nf90_float,dynm2ds,dye_s_vid)
       ierr = nf90_put_att(nc_ofid,dye_s_vid,"long_name","Dye concentration")
-      ierr = nf90_put_att(nc_ofid,dye_s_vid,"units","(-)")
+      ierr = nf90_put_att(nc_ofid,dye_s_vid,"units","none")
       ierr = nf90_put_att(nc_ofid,dye_s_vid,"standard_name","dye concentration")
       ierr = nf90_put_att(nc_ofid,dye_s_vid,"type","data")
     END IF 
@@ -1125,7 +1125,7 @@ NETCDF_TIMESTRING = 'seconds after 00:00:00'
     IF(OUT_DYE_AGE)THEN 
       ierr = nf90_def_var(nc_ofid,"dye_age",nf90_float,dynm2ds,dye_age_s_vid)
       ierr = nf90_put_att(nc_ofid,dye_age_s_vid,"long_name","Dye concentration age")
-      ierr = nf90_put_att(nc_ofid,dye_age_s_vid,"units","(s)")
+      ierr = nf90_put_att(nc_ofid,dye_age_s_vid,"units","second")
       ierr = nf90_put_att(nc_ofid,dye_age_s_vid,"standard_name","dye concentration age")
       ierr = nf90_put_att(nc_ofid,dye_age_s_vid,"type","data")
     END IF 
