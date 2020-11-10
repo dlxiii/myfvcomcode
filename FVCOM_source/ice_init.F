@@ -619,7 +619,7 @@
       enddo              ! i
       enddo              ! j
       do ni = 1,ncat
-!DIR$ CONCURRENT !Cray
+!DIR CONCURRENT !Cray
 !cdir nodep      !NEC
 !ocl novrec      !Fujitsu
          do ij = 1, icells

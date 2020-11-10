@@ -336,7 +336,7 @@
       ! Compute the volume, area, and thickness of new ice.
       !-----------------------------------------------------------------
 
-!DIR$ CONCURRENT !Cray
+!DIR CONCURRENT !Cray
 !cdir nodep      !NEC
 !ocl novrec      !Fujitsu
       do ij = 1, icells
@@ -450,7 +450,7 @@
 
       do ni = 1, ncat
 
-!DIR$ CONCURRENT !Cray
+!DIR CONCURRENT !Cray
 !cdir nodep      !NEC
 !ocl novrec      !Fujitsu
          do ij = 1, kcells
@@ -462,7 +462,7 @@
          enddo                  ! ij
 
          do k=1,nilyr
-!DIR$ CONCURRENT !Cray
+!DIR CONCURRENT !Cray
 !cdir nodep      !NEC
 !ocl novrec      !Fujitsu
             do ij = 1, kcells
@@ -480,7 +480,7 @@
       ! Combine new ice grown in open water with category 1 ice.
       ! NOTE: vsnon and esnon are unchanged.
       !-----------------------------------------------------------------
-!DIR$ CONCURRENT !Cray
+!DIR CONCURRENT !Cray
 !cdir nodep      !NEC
 !ocl novrec      !Fujitsu
       do ij = 1, jcells
@@ -498,7 +498,7 @@
       enddo                     ! ij
 
       do k = 1, nilyr
-!DIR$ CONCURRENT !Cray
+!DIR CONCURRENT !Cray
 !cdir nodep      !NEC
 !ocl novrec      !Fujitsu
          do ij = 1, jcells
@@ -581,7 +581,7 @@
       ! Melt the ice and increment fluxes.
       !-----------------------------------------------------------------
 
-!DIR$ CONCURRENT !Cray
+!DIR CONCURRENT !Cray
 !cdir nodep      !NEC
 !ocl novrec      !Fujitsu
          do ij = 1, icells
@@ -621,7 +621,7 @@
          enddo                  ! ij
 
          do k = 1, nilyr
-!DIR$ CONCURRENT !Cray
+!DIR CONCURRENT !Cray
 !cdir nodep      !NEC
 !ocl novrec      !Fujitsu
             do ij = 1, icells
@@ -716,7 +716,7 @@
 
          jcells = 0             ! freeboard adjustment counter
 
-!DIR$ CONCURRENT !Cray
+!DIR CONCURRENT !Cray
 !cdir nodep      !NEC
 !ocl novrec      !Fujitsu
          do ij = 1, icells      ! aicen > puny
@@ -784,7 +784,7 @@
       ! Adjust ice energy.
       !-----------------------------------------------------------------
          do k = 1, nilyr
-!DIR$ CONCURRENT !Cray
+!DIR CONCURRENT !Cray
 !cdir nodep      !NEC
 !ocl novrec      !Fujitsu
             do ij = 1, jcells   ! just cells with freeboard adjustment
