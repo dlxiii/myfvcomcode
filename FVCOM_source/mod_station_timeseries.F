@@ -3,11 +3,7 @@ MODULE MOD_STATION_TIMESERIES
   USE MOD_TIME
   USE NETCDF
   USE VARS_WAVE
-! YULONG WANG 20201027==>
-# if defined (DYE_RELEASE)
-  USE MOD_DYE
-# endif
-! YULONG WANG 20201027<==
+
   IMPLICIT NONE
   SAVE
   
@@ -43,16 +39,14 @@ MODULE MOD_STATION_TIMESERIES
   LOGICAL OUT_EVP
 # endif	 
 ! YULONG WANG 20201027<==
-! YULONG WANG 20201109==>
-# if defined (DYE_RELEASE)
-IF(DYE_ON)THEN
-  LOGICAL OUT_DYE
-# if defined (DYE_AGE_ACTIVE)
-  LOGICAL OUT_DYE_AGE
-# endif
-END IF
-# endif
-! YULONG WANG 20201109<==
+! ! YULONG WANG 20201109==>
+! # if defined (DYE_RELEASE)
+!     LOGICAL OUT_DYE
+! # if defined (DYE_AGE_ACTIVE)
+!     LOGICAL OUT_DYE_AGE
+! # endif
+! # endif
+! ! YULONG WANG 20201109<==
   CHARACTER(LEN=80) OUT_INTERVAL
   
   NAMELIST /NML_STATION_TIMESERIES/        &
@@ -88,16 +82,14 @@ END IF
       & OUT_EVP,                          &
 # endif	 
 ! YULONG WANG 20201027<==
-! YULONG WANG 20201109==>
-# if defined (DYE_RELEASE)
-  IF(DYE_ON)THEN
-      & OUT_DYE,                          &
-# if defined (DYE_AGE_ACTIVE)
-      & OUT_DYE_AGE,                      &
-# endif
-  END IF
-# endif
-! YULONG WANG 20201109<==
+! ! YULONG WANG 20201109==>
+! # if defined (DYE_RELEASE)
+!       & OUT_DYE,                          &
+! # if defined (DYE_AGE_ACTIVE)
+!       & OUT_DYE_AGE,                      &
+! # endif
+! # endif
+! ! YULONG WANG 20201109<==
        & OUT_INTERVAL
        
   INTEGER NSTA       
@@ -160,16 +152,14 @@ END IF
 # endif	 
 ! YULONG WANG 20201027<==
 
-! YULONG WANG 20201109==>
-# if defined (DYE_RELEASE)
-  IF(DYE_ON)THEN
-   integer,private :: dye_s_vid
-# if defined (DYE_AGE_ACTIVE)
-   integer,private :: dye_age_s_vid
-# endif
-  END IF
-# endif
-! YULONG WANG 20201109<==
+! ! YULONG WANG 20201109==>
+! # if defined (DYE_RELEASE)
+!    integer,private :: dye_s_vid
+! # if defined (DYE_AGE_ACTIVE)
+!    integer,private :: dye_age_s_vid
+! # endif
+! # endif
+! ! YULONG WANG 20201109<==
    
 #  if defined (WAVE_CURRENT_INTERACTION) && !defined (WAVE_OFFLINE)
    integer,private :: hs_s_vid
@@ -237,16 +227,14 @@ END IF
    OUT_EVP                  = .False.
 # endif	 
 ! YULONG WANG 20201027<==
-! YULONG WANG 20201109==>
-# if defined (DYE_RELEASE)
-  IF(DYE_ON)THEN
-   OUT_DYE                  = .False.
-# if defined (DYE_AGE_ACTIVE)
-   OUT_DYE_AGE              = .False.
-# endif
-  END IF
-# endif
-! YULONG WANG 20201109<==
+! ! YULONG WANG 20201109==>
+! # if defined (DYE_RELEASE)
+!    OUT_DYE                  = .False.
+! # if defined (DYE_AGE_ACTIVE)
+!    OUT_DYE_AGE              = .False.
+! # endif
+! # endif
+! ! YULONG WANG 20201109<==
    OUT_INTERVAL              = "A length of time: 'seconds= ','days= ', or 'cycles= '"
    
    
@@ -654,32 +642,30 @@ END IF
 # endif	 
 ! YULONG WANG 20201027<==
 
-! YULONG WANG 20201109==>
-# if defined (DYE_RELEASE)
-  IF(DYE_ON)THEN
-    ! DYE
-    IF(OUT_DYE)THEN 
-      allocate(ftemp(m))
-      ftemp =DYE(1:m)
-      i1 = lbound(ftemp,1) ; i2 = ubound(ftemp,1)
-      call putvar(i1,i2,m,mgl,1,1,"n",ftemp,nc_ofid,dye_s_vid,myid&
-          &,nprocs,ipt, stck_cnt)
-      deallocate(ftemp)
-    END IF 
-# if defined (DYE_AGE_ACTIVE)
-    ! DYE_AGE
-    IF(OUT_DYE_AGE)THEN 
-      allocate(ftemp(m))
-      ftemp =DYE_AGE(1:m)
-      i1 = lbound(ftemp,1) ; i2 = ubound(ftemp,1)
-      call putvar(i1,i2,m,mgl,1,1,"n",ftemp,nc_ofid,dye_age_s_vid,myid&
-          &,nprocs,ipt, stck_cnt)
-      deallocate(ftemp)
-    END IF 
-# endif
-  END IF
-# endif
-! YULONG WANG 20201109<==
+! ! YULONG WANG 20201109==>
+! # if defined (DYE_RELEASE)
+!     ! DYE
+!     IF(OUT_DYE)THEN 
+!       allocate(ftemp(m))
+!       ftemp =DYE(1:m)
+!       i1 = lbound(ftemp,1) ; i2 = ubound(ftemp,1)
+!       call putvar(i1,i2,m,mgl,1,1,"n",ftemp,nc_ofid,dye_s_vid,myid&
+!           &,nprocs,ipt, stck_cnt)
+!       deallocate(ftemp)
+!     END IF 
+! # if defined (DYE_AGE_ACTIVE)
+!     ! DYE_AGE
+!     IF(OUT_DYE_AGE)THEN 
+!       allocate(ftemp(m))
+!       ftemp =DYE_AGE(1:m)
+!       i1 = lbound(ftemp,1) ; i2 = ubound(ftemp,1)
+!       call putvar(i1,i2,m,mgl,1,1,"n",ftemp,nc_ofid,dye_age_s_vid,myid&
+!           &,nprocs,ipt, stck_cnt)
+!       deallocate(ftemp)
+!     END IF 
+! # endif
+! # endif
+! ! YULONG WANG 20201109<==
 
 #    if defined (WAVE_CURRENT_INTERACTION) && !defined (WAVE_OFFLINE)
      IF(OUT_SIG_WAVE_HEIGHT)THEN
@@ -1109,30 +1095,28 @@ NETCDF_TIMESTRING = 'seconds after 00:00:00'
 # endif	 
 ! YULONG WANG 20201027<==
 
-! YULONG WANG 20201109==>
-# if defined (DYE_RELEASE)
-  IF(DYE_ON)THEN
-    ! DYE
-    IF(OUT_DYE)THEN 
-      ierr = nf90_def_var(nc_ofid,"dye",nf90_float,dynm2ds,dye_s_vid)
-      ierr = nf90_put_att(nc_ofid,dye_s_vid,"long_name","Dye concentration")
-      ierr = nf90_put_att(nc_ofid,dye_s_vid,"units","none")
-      ierr = nf90_put_att(nc_ofid,dye_s_vid,"standard_name","dye concentration")
-      ierr = nf90_put_att(nc_ofid,dye_s_vid,"type","data")
-    END IF 
-# if defined (DYE_AGE_ACTIVE)
-    ! DYE_AGE
-    IF(OUT_DYE_AGE)THEN 
-      ierr = nf90_def_var(nc_ofid,"dye_age",nf90_float,dynm2ds,dye_age_s_vid)
-      ierr = nf90_put_att(nc_ofid,dye_age_s_vid,"long_name","Dye concentration age")
-      ierr = nf90_put_att(nc_ofid,dye_age_s_vid,"units","second")
-      ierr = nf90_put_att(nc_ofid,dye_age_s_vid,"standard_name","dye concentration age")
-      ierr = nf90_put_att(nc_ofid,dye_age_s_vid,"type","data")
-    END IF 
-# endif
-  END IF
-# endif
-! YULONG WANG 20201109<==
+! ! YULONG WANG 20201109==>
+! # if defined (DYE_RELEASE)
+!     ! DYE
+!     IF(OUT_DYE)THEN 
+!       ierr = nf90_def_var(nc_ofid,"dye",nf90_float,dynm2ds,dye_s_vid)
+!       ierr = nf90_put_att(nc_ofid,dye_s_vid,"long_name","Dye concentration")
+!       ierr = nf90_put_att(nc_ofid,dye_s_vid,"units","none")
+!       ierr = nf90_put_att(nc_ofid,dye_s_vid,"standard_name","dye concentration")
+!       ierr = nf90_put_att(nc_ofid,dye_s_vid,"type","data")
+!     END IF 
+! # if defined (DYE_AGE_ACTIVE)
+!     ! DYE_AGE
+!     IF(OUT_DYE_AGE)THEN 
+!       ierr = nf90_def_var(nc_ofid,"dye_age",nf90_float,dynm2ds,dye_age_s_vid)
+!       ierr = nf90_put_att(nc_ofid,dye_age_s_vid,"long_name","Dye concentration age")
+!       ierr = nf90_put_att(nc_ofid,dye_age_s_vid,"units","second")
+!       ierr = nf90_put_att(nc_ofid,dye_age_s_vid,"standard_name","dye concentration age")
+!       ierr = nf90_put_att(nc_ofid,dye_age_s_vid,"type","data")
+!     END IF 
+! # endif
+! # endif
+! ! YULONG WANG 20201109<==
 
 #   if defined (WAVE_CURRENT_INTERACTION) && !defined (WAVE_OFFLINE)
     if(OUT_SIG_WAVE_HEIGHT)then
