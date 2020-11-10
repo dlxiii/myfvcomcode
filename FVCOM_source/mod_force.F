@@ -12690,7 +12690,7 @@ CONTAINS
 # else
           IF(TRIM(COARE_VERSION) == 'BULKALGORITHM')THEN
                ! RAIN(I) = QPREC(I)*3600*1000  ! change unit to mm/hr  from m/s
-               ! RAIN(I) = QPREC(I)*1000  ! From m/s to kg/m2/s, 1kg/m2/s = 1mm/s, 1m/s = 1000kg/m2/s
+               ! RAIN(I) = QPREC(I)*1000  ! From m/s to kg/m2/s, 1m/s = 1000kg/m2/s 1kg/m2/s = 1mm/s
                CALL BULKALGORITHM(WDS,T_AIR(I),RH_AIR(I),PA_AIR(I),T1(I,1),CLD_COV(I), &
                NLW_AIR,HSB,HLB,QPREC(I)*1000,EVAP)
                HEAT_NET(I)  = DSW_AIR(I)*0.91 + NLW_AIR + HSB + HLB ! SAME SYMBOL SAME DIRECTION
@@ -12698,7 +12698,7 @@ CONTAINS
                HEAT_SENSIBLE(I) = HSB
                HEAT_LATENT(I) = HLB
                HEAT_RLN(I)  = NLW_AIR
-               QEVAP(I) = EVAP
+               QEVAP(I) = EVAP/1000 ! FROM KG/M2/S TO M/S 1M/S = 1000KG/M2/S
 # endif
 ! YULONG WANG 20201027<==
 		ELSE
@@ -12910,14 +12910,15 @@ CONTAINS
 # else
           IF(TRIM(COARE_VERSION) == 'BULKALGORITHM')THEN
                ! RAIN(I) = QPREC(I)*3600*1000  ! change unit to mm/hr  from m/s
-               ! RAIN(I) = QPREC(I)*1000  ! From m/s to kg/m2/s, 1kg/m2/s = 1mm/s, 1m/s = 1000kg/m2/s
+               ! RAIN(I) = QPREC(I)*1000  ! From m/s to kg/m2/s, 1m/s = 1000kg/m2/s 1kg/m2/s = 1mm/s
                CALL BULKALGORITHM(WDS,T_AIR(I),RH_AIR(I),PA_AIR(I),T1(I,1),CLD_COV(I), &
                NLW_AIR,HSB,HLB,QPREC(I)*1000,EVAP)
-               HEAT_NET(I) = NLW_AIR+DSW_AIR(I)*0.91+HSB+HLB
+               HEAT_NET(I)  = DSW_AIR(I)*0.91 + NLW_AIR + HSB + HLB ! SAME SYMBOL SAME DIRECTION
                HEAT_SWV(I)  = DSW_AIR(I)*0.91
                HEAT_SENSIBLE(I) = HSB
                HEAT_LATENT(I) = HLB
-               HEAT_RLN(I)  = NLW_AIR    
+               HEAT_RLN(I)  = NLW_AIR
+               QEVAP(I) = EVAP/1000 ! FROM KG/M2/S TO M/S 1M/S = 1000KG/M2/S  
 # endif
 ! YULONG WANG 20201027<==
 	 ELSE
@@ -13097,14 +13098,15 @@ CONTAINS
 # else
           IF(TRIM(COARE_VERSION) == 'BULKALGORITHM')THEN
                ! RAIN(I) = QPREC(I)*3600*1000  ! change unit to mm/hr  from m/s
-               ! RAIN(I) = QPREC(I)*1000  ! From m/s to kg/m2/s, 1kg/m2/s = 1mm/s, 1m/s = 1000kg/m2/s
+               ! RAIN(I) = QPREC(I)*1000  ! From m/s to kg/m2/s, 1m/s = 1000kg/m2/s 1kg/m2/s = 1mm/s
                CALL BULKALGORITHM(WDS,T_AIR(I),RH_AIR(I),PA_AIR(I),T1(I,1),CLD_COV(I), &
                NLW_AIR,HSB,HLB,QPREC(I)*1000,EVAP)
-               HEAT_NET(I) = NLW_AIR+DSW_AIR(I)*0.91+HSB+HLB
+               HEAT_NET(I)  = DSW_AIR(I)*0.91 + NLW_AIR + HSB + HLB ! SAME SYMBOL SAME DIRECTION
                HEAT_SWV(I)  = DSW_AIR(I)*0.91
                HEAT_SENSIBLE(I) = HSB
                HEAT_LATENT(I) = HLB
-               HEAT_RLN(I)  = NLW_AIR     
+               HEAT_RLN(I)  = NLW_AIR
+               QEVAP(I) = EVAP/1000 ! FROM KG/M2/S TO M/S 1M/S = 1000KG/M2/S   
 # endif
 ! YULONG WANG 20201027<==
 	 ELSE
