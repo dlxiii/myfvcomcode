@@ -91,7 +91,7 @@
 
 !*********** rainfall and evaporation ***************
     IF (windabs>=1.) THEN
-        evap = rhoa*Ce*dq*windabs * -1.
+        evap = max(rhoa*Ce*dq*windabs,0.) * -1.
     ELSE
         tbifu=dt+0.61*TaK*dq
         IF (tbifu< 0.) THEN
