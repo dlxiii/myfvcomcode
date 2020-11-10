@@ -298,7 +298,7 @@
 
       do ni = 1, ncat
 
-!DIR$ CONCURRENT !Cray
+!DIR CONCURRENT !Cray
 !cdir nodep      !NEC
 !ocl novrec      !Fujitsu
          do ij = 1, icells
@@ -312,7 +312,7 @@
          enddo                  ! ij
 
          do k = 1, nilyr
-!DIR$ CONCURRENT !Cray
+!DIR CONCURRENT !Cray
 !cdir nodep      !NEC
 !ocl novrec      !Fujitsu
             do ij = 1, icells
@@ -1092,7 +1092,7 @@
          enddo
          enddo
 
-!DIR$ CONCURRENT !Cray
+!DIR CONCURRENT !Cray
 !cdir nodep      !NEC
 !ocl novrec      !Fujitsu
          do ij = 1, icells
@@ -1131,7 +1131,7 @@
          enddo                  ! ij
 
          do k = 1, nilyr
-!DIR$ CONCURRENT !Cray
+!DIR CONCURRENT !Cray
 !cdir nodep      !NEC
 !ocl novrec      !Fujitsu
             do ij = 1, icells
@@ -1379,7 +1379,7 @@
       !-----------------------------------------------------------------
 
          do k = 1, nilyr
-!DIR$ CONCURRENT !Cray
+!DIR CONCURRENT !Cray
 !cdir nodep      !NEC
 !ocl novrec      !Fujitsu
             do ij = 1, icells
@@ -1395,7 +1395,7 @@
             enddo               ! ij
          enddo                  ! k
 
-!DIR$ CONCURRENT !Cray
+!DIR CONCURRENT !Cray
 !cdir nodep      !NEC
 !ocl novrec      !Fujitsu
          do ij = 1, icells
