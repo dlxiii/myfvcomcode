@@ -30,17 +30,17 @@
 !===========================================================================================|
 !   Inp/Otp Meteorological Boundary Conditions for Calculating Heat Flux                    |
 !===========================================================================================|
-!    [I]  wind speed at height 2m:             m/s          "wind"                          |
-!    [I]  bulk air temperature at height 2m:   degree(C)    "tair"                          |
-!    [I]  relative humidity at height 2m:      (%)          "humidity"                      |
-!    [I]  surface pressure:                    mb[0.1kPa]   "pair"                          |
-!    [I]  calculated water temperature:        degree(C)    "TC"                            |
-!    [I]  cloud cover:                         (0-1)        "cloud"                         |
-!    [O]  Longwave radiation from sea surface: w/m^2        "sql"                           |
-!    [O]  Sensible heat flux due to con&trans: w/m^2        "sqh"                           |
-!    [O]  Latent heat flux due to evaporation: w/m^2        "sqe"                           |
-!    [I]  precipitation:                       kg/m2/s      "rain",ocean lose water is negative|   
-!    [O]  evaporation:                         kg/m2/s      "evap",ocean lose water is negative|  
+! [I]  wind speed at height 2m:             m/s          "wind"                             |
+! [I]  bulk air temperature at height 2m:   degree(C)    "tair"                             |
+! [I]  relative humidity at height 2m:      (%)          "humidity"                         |
+! [I]  surface pressure:                    mb[0.1kPa]   "pair"                             |
+! [I]  calculated water temperature:        degree(C)    "TC"                               |
+! [I]  cloud cover:                         (0-1)        "cloud"                            |
+! [O]  Longwave radiation from sea surface: w/m^2        "sql"                              |
+! [O]  Sensible heat flux due to con&trans: w/m^2        "sqh"                              |
+! [O]  Latent heat flux due to evaporation: w/m^2        "sqe"                              |
+! [I]  precipitation:                       kg/m2/s      "rain",ocean lose water is negative|   
+! [O]  evaporation:                         kg/m2/s      "evap",ocean lose water is negative|  
 !===========================================================================================|
 
 !***********  meteorological constants ***********************************
