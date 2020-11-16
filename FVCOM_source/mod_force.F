@@ -13061,36 +13061,36 @@ CONTAINS
 !g.l. 10/10/2017         HEAT_RLN(I)  =DLW_AIR(I)
              HEAT_RLN(I)  =emmiss*(DLW_AIR(I)+ulw_airf)	     
 	   END IF  
-	 ELSE IF(TRIM(COARE_VERSION) == 'COARE40VN')THEN
-           RAIN(I) = QPREC(I)*3600*1000  ! change unit to mm/hr  from m/s
-	   ZI40 = fmiss
-	   CP40 = 0.0_SP
-	   SIGH = 0.0_SP
-           CALL COARE40VN(WDS,ZUU,T_AIR(I),ZTT,RH_AIR(I),ZQQ,PA_AIR(I),T1(I,1),  &
+      ELSE IF(TRIM(COARE_VERSION) == 'COARE40VN')THEN
+          RAIN(I) = QPREC(I)*3600*1000  ! change unit to mm/hr  from m/s
+	     ZI40 = fmiss
+	     CP40 = 0.0_SP
+	     SIGH = 0.0_SP
+          CALL COARE40VN(WDS,ZUU,T_AIR(I),ZTT,RH_AIR(I),ZQQ,PA_AIR(I),T1(I,1),  &
                 DLW_AIR(I),DSW_AIR(I),TAU,HSB,HLB,CORR(I),ZI40(I),RAIN(I),CP40(I),SIGH(I),fmiss,USR,DTER) !MDR include USR, DTER
 	      
-           IF(.NOT. HEATING_FRESHWATER)THEN	      
+          IF(.NOT. HEATING_FRESHWATER)THEN	      
              t1k=t1(i,1)+273.16_sp
              ulw_airf=-emmiss*StefBo*t1k*t1k*t1k*t1k
              HEAT_NET(I) = DLW_AIR(I)+DSW_AIR(I)+HSB+HLB+ulw_airf        ! ejw 8/16/2006 based on ROMS
              HEAT_SWV(I) = DSW_AIR(I)
-	     !EJA edit - output sensible and latent heat flux
-	     HEAT_SENSIBLE(I) = HSB
-	     HEAT_LATENT(I) = HLB
-!g.l. 10/10/2017         HEAT_RLN(I)  = DLW_AIR(I)
+	        !EJA edit - output sensible and latent heat flux
+	        HEAT_SENSIBLE(I) = HSB
+	        HEAT_LATENT(I) = HLB
+             !g.l. 10/10/2017         HEAT_RLN(I)  = DLW_AIR(I)
              HEAT_RLN(I)  = DLW_AIR(I)+ulw_airf	     
 	   ELSE
              USRCOARE(I) = USR !MDR 3-19-2013 for wind wave mix
-!             t1k=t1(i,1)+273.16_sp !MDR 4-24-2013
+!            t1k=t1(i,1)+273.16_sp !MDR 4-24-2013
              t1k=t1(i,1)-DTER+273.16_sp !MDR 4-24-2013, include cool skin adjustment to surface temp
 !MDR         ulw_airf=-emmiss*StefBo*t1k*t1k*t1k*t1k
 !MDR         HEAT_NET(I) = DLW_AIR(I)+DSW_AIR(I)+HSB+HLB+ulw_airf        ! ejw 8/16/2006 based on ROMS
              ulw_airf=-StefBo*t1k*t1k*t1k*t1k
              HEAT_NET(I) = DSW_AIR(I)+HSB+HLB+emmiss*(DLW_AIR(I)+ulw_airf) !MDR, apply emmiss to NET long wave, as in COARE     
              HEAT_SWV(I)  = DSW_AIR(I)
-	     !EJA edit - output sensible and latent heat flux
-	     HEAT_SENSIBLE(I) = HSB
-	     HEAT_LATENT(I) = HLB
+	        !EJA edit - output sensible and latent heat flux
+	        HEAT_SENSIBLE(I) = HSB
+	        HEAT_LATENT(I) = HLB
 !g.l. 10/10/2017         HEAT_RLN(I)  =DLW_AIR(I)
              HEAT_RLN(I)  =emmiss*(DLW_AIR(I)+ulw_airf)	     
 	   END IF  
