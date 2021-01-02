@@ -371,7 +371,7 @@ MODULE MOD_DYE
          I1=NBSN(I,J)
          I2=NBSN(I,J+1)
 
-#    if defined (WET_DRY)
+# if defined (WET_DRY)
          IF(ISWETN(I1) == 0 .AND. ISWETN(I2) == 1)THEN
           FFD=0.5_SP*(DYE(I,K)+DYE(I2,K))!-DYEMEAN(I,K)-DYEMEAN(I2,K))
           FF1=0.5_SP*(DYE(I,K)+DYE(I2,K))
@@ -385,10 +385,10 @@ MODULE MOD_DYE
           FFD=0.5_SP*(DYE(I1,K)+DYE(I2,K))!-DYEMEAN(I1,K)-DYEMEAN(I2,K))
           FF1=0.5_SP*(DYE(I1,K)+DYE(I2,K))
 	 END IF 
-#    else	 
+# else	 
          FFD=0.5_SP*(DYE(I1,K)+DYE(I2,K))!-DYEMEAN(I1,K)-DYEMEAN(I2,K))
          FF1=0.5_SP*(DYE(I1,K)+DYE(I2,K))
-#    endif
+# endif
 
 !!$#        if defined (SPHERICAL)
 !!$         XTMP  = VX(I2)*TPI-VX(I1)*TPI
@@ -2059,9 +2059,9 @@ MODULE MOD_DYE
       USE ALL_VARS
       USE MOD_UTILS
       USE BCS
-      # if defined (WET_DRY)
+# if defined (WET_DRY)
       USE MOD_WD
-      # endif
+# endif
       IMPLICIT NONE
       INTEGER :: I,K,J,KI,KK
       REAL(DP) :: TMP,TMP1,TMP2,TMP3,QTMP,GW,ZDEP,FKH,UMOLPR
@@ -2130,9 +2130,9 @@ MODULE MOD_DYE
          END DO
       END DO
 
-      # if !defined (WET_DRY)
+# if !defined (WET_DRY)
       FF_AGE(1:M,1:KBM1) = F_AGE(1:M,1:KBM1)
-      # else
+# else
       DO  K = 1, KBM1
          DO  I = 1, M
             IF(ISWETN(I) == 1)THEN
@@ -2140,14 +2140,14 @@ MODULE MOD_DYE
             END IF
          END DO
       END DO
-      # endif
+# endif
 
       DO I = 1, M
-      # if !defined (WET_DRY)
+# if !defined (WET_DRY)
          IF (ISONB(I) /= 2) THEN
-      # else
+# else
          IF(ISWETN(I) == 1 .AND.ISONB(I) /= 2)THEN
-      # endif
+# endif
             TMP1=PFPXB_AGE(I)*COS(SITA_GD(I))+PFPYB_AGE(I)*SIN(SITA_GD(I))
             TMP2=AH_BOTTOM(I)*PHPN(I)
             TMP3=KHBOTTOM(I)+UMOLPR+AH_BOTTOM(I)*PHPN(I)*PHPN(I)
@@ -2165,26 +2165,26 @@ MODULE MOD_DYE
       DO  K = 2, KBM1
          KI = KB - K
          DO  I = 1, M
-      #  if !defined (WET_DRY)
+#  if !defined (WET_DRY)
             IF (D(I) > 0.0_SP .AND.ISONB(I) /= 2) THEN
-      #  else
+#  else
             IF(ISWETN(I) == 1 .AND.ISONB(I) /= 2)THEN
-      #  endif
+#  endif
                FF_AGE(I,KI) = (VHF_AGE(I,KI)*FF_AGE(I,KI+1)+VHPF_AGE(I,KI))
             END IF
          END DO
       END DO
 
       DO I = 1, M
-      #  if defined (WET_DRY)
+#  if defined (WET_DRY)
          IF(ISWETN(I)*ISWETNT(I) == 1 )then
-      #  endif
+#  endif
          DO K = 1, KBM1
             F_AGE(I,K) = FF_AGE(I,K)
          END DO
-      #  if defined (WET_DRY)
+#  if defined (WET_DRY)
          END IF
-      #  endif
+#  endif
       END DO
 
       !   
